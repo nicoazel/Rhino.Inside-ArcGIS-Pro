@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>RhinoArcGIS.Rhino</RootNamespace>
+    <AssemblyName>RhinoArcGIS.Rhino</AssemblyName>
+    <NoWarn>CA1416;NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compile-only; loaded from the real Rhino install at runtime (see ROADMAP / launch fix). -->
+    <PackageReference Include="RhinoCommon" Version="8.23.25251.13001" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RhinoArcGIS.Core\RhinoArcGIS.Core.csproj" />
+  </ItemGroup>
+
+</Project>

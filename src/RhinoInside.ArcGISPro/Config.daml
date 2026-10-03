@@ -1,0 +1,91 @@
+<ArcGIS defaultAssembly="RhinoInside.ArcGISPro.dll" defaultNamespace="RhinoInside.ArcGISPro" xmlns="http://schemas.esri.com/DADF/Registry" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://schemas.esri.com/DADF/Registry file:///C:/Program%20Files/ArcGIS/Pro/bin/ArcGIS.Desktop.Framework.xsd">
+  <AddInInfo id="{f10f6246-8091-4aad-8b5c-2bcb6b523784}" version="1.3.0" desktopVersion="3.7.1901">
+    <Name>Rhino.Inside for ArcGIS Pro</Name>
+    <Description>
+      Hosts Rhino 8 in-process inside ArcGIS Pro and provides interoperability between the two:
+      converting GIS features to Rhino geometry and pushing Rhino objects back to feature layers.
+      Requires ArcGIS Pro 3.7 (.NET 10) and a licensed Rhino 8 installation.
+    </Description>
+    <Image>Images\AddInDesktop32.png</Image>
+    <Author>Nicolas Azel</Author>
+    <Company>Independent community project</Company>
+    <Date>10/3/2026</Date>
+    <Subject>Framework, Geometry, Editing</Subject>
+    <!-- Note subject can be one or more of these topics:
+                    Content, Framework, Editing, Geodatabase, Geometry, Geoprocessing, Layouts, Map Authoring, Map Exploration -->
+  </AddInInfo>
+  <modules>
+    <!-- autoLoad so the module's Initialize runs at startup: it captures the UI thread for sync and
+         starts the (opt-in) test bridge, neither of which should wait for a first button click. -->
+    <insertModule id="RhinoInsideAddin_module" className="RhinoInsideAddin" autoLoad="true" caption="Rhino.Inside Management Tab">
+      <!-- This specifies the addin have it's own tab. -->
+      <tabs>
+        <tab id="RhinoInsideTab" caption="Rhino.Inside" keytip="RhinoInsideTab">
+          <group refID="RhinoInsideGroup_tab" />
+        </tab>
+      </tabs>
+      <!-- This defines groups. -->
+      <groups>
+        <!--<group
+          id="RhinoInsideGroup_Addins"
+          caption="Rhino.Inside"
+          appearsOnAddInTab="true"
+          keytip="RhinoInsideGroup">
+
+          ~1~ host controls within groups @1@
+          <button refID="RhinoInside_ArcGISPro_Dockpane_ShowButton" size="large" />
+        </group>-->
+        <group id="RhinoInsideGroup_tab" caption="manage" appearsOnAddInTab="false" keytip="RhinoInsideGroup">
+          <!-- host controls within groups -->
+          <button refID="RhinoInside_ArcGISPro_Dockpane_ShowButton" size="large" />
+          <button refID="RhinoInside_ArcGISPro_LaunchRhinoInside" size="large" />
+        </group>
+      </groups>
+
+      <!-- This section is for defining controls that are hosted in groups. -->
+      <controls>
+
+        <!-- add your controls here -->
+        <button id="RhinoInside_ArcGISPro_Dockpane_ShowButton"
+                caption="Show Dockpane"
+                className="DockpaneView_ShowButton"
+                loadOnClick="true"
+                smallImage="GenericButtonPurple16"
+                largeImage="GenericButtonPurple32"
+                keytip="RhinoInside_Dockpane_show">
+          <tooltip heading="Show Dockpane">
+              Show Dockpane
+            <disabledText /></tooltip>
+        </button>
+
+        <!-- Button -->
+        <button id="RhinoInside_ArcGISPro_LaunchRhinoInside"
+                caption="LaunchRhinoInside"
+                className="LaunchRhinoInside"
+                smallImage="GenericButtonBlue16"
+                largeImage="GenericButtonBlue32"
+                keytip="RhinoInside_Launch"
+                >
+          <tooltip
+            heading="Launch">Starts Rhino Inside
+            <disabledText />
+          </tooltip>
+        </button>
+
+
+      </controls>
+      <!-- This section defines dockpanes for the addin. -->
+      <dockPanes>
+        <dockPane
+          id="RhinoInside_ArcGISPro_Dockpane"
+          caption="Rhino.Inside"
+          className="DockpaneViewModel"
+          dock="group"
+          dockWith="esri_core_projectDockPane"
+        >
+            <content className="DockpaneView" />
+        </dockPane>
+      </dockPanes>
+    </insertModule>
+  </modules>
+</ArcGIS>

@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "provenance": "Invented coordinates and attributes; no external GIS data is read.",
+  "license": "MIT",
+  "generator": "tools/generate-fixtures.py",
+  "generatorSha256": "126b3f5495ed54c91e88e49d8dc03c5cc8fbe27b816834639dc8335be830a67d",
+  "pyshpVersion": "2.3.1",
+  "dbfHeaderDate": "2026-01-01",
+  "files": [
+    {
+      "path": "SHP/Boundary_Multipart_Polygon.cpg",
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+    },
+    {
+      "path": "SHP/Boundary_Multipart_Polygon.dbf",
+      "sha256": "25db526d399dd131e5415e18e9e1b93c6f8c9a180b38431a34c021e674437a84"
+    },
+    {
+      "path": "SHP/Boundary_Multipart_Polygon.prj",
+      "sha256": "2b1b17dfd34d0335c56ad5d2c6974d15ee9a0ca573091f3e9657c3d8730dd7d6"
+    },
+    {
+      "path": "SHP/Boundary_Multipart_Polygon.shp",
+      "sha256": "d073ad9aa47c35a13cbf4e16d4efe4601252b048dfb4a4470b3fa6e4ba6dff11"
+    },
+    {
+      "path": "SHP/Boundary_Multipart_Polygon.shx",
+      "sha256": "d0ffd29ae940321a6c9850b021453513ceaa3c1f9f9ef3e3ee621d14c0211449"
+    },
+    {
+      "path": "SHP/Multipatch_Single_Building.cpg",
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+    },
+    {
+      "path": "SHP/Multipatch_Single_Building.dbf",
+      "sha256": "3e086a826cc75b5c94051808d376746bcd01ff0db6095d222f80f07e05599dd7"
+    },
+    {
+      "path": "SHP/Multipatch_Single_Building.prj",
+      "sha256": "2b1b17dfd34d0335c56ad5d2c6974d15ee9a0ca573091f3e9657c3d8730dd7d6"
+    },
+    {
+      "path": "SHP/Multipatch_Single_Building.shp",
+      "sha256": "72c4d596e8555e30f5e294f1a01c5c9d5007d939adfc71508bfa370ba4e9c9a7"
+    },
+    {
+      "path": "SHP/Multipatch_Single_Building.shx",
+      "sha256": "09154983625f82dd570ce2c04d2ab0553cd7518c3ba807ae2014cb509d2b29bd"
+    },
+    {
+      "path": "SHP/Point_Multi_Mixed.cpg",
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+    },
+    {
+      "path": "SHP/Point_Multi_Mixed.dbf",
+      "sha256": "c1f21d7c01214f081d978b61b659e7d25e0c66fe53b9e0e12e62a8050e89ec32"
+    },
+    {
+      "path": "SHP/Point_Multi_Mixed.prj",
+      "sha256": "2b1b17dfd34d0335c56ad5d2c6974d15ee9a0ca573091f3e9657c3d8730dd7d6"
+    },
+    {
+      "path": "SHP/Point_Multi_Mixed.shp",
+      "sha256": "f2d4b8f7df0b7e1230abc321b9c145cd71b83eba5b956c1ced8697c003060b1b"
+    },
+    {
+      "path": "SHP/Point_Multi_Mixed.shx",
+      "sha256": "aa55c7548aa2fa280e5f777ea9bf2544a8b2cbbf6be50551a3c374af8238a60d"
+    },
+    {
+      "path": "SHP/Polygon_MixedMultiPart_Parcels.cpg",
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+    },
+    {
+      "path": "SHP/Polygon_MixedMultiPart_Parcels.dbf",
+      "sha256": "3b84865db27987eff12f9e3f233f4994900850880da44284dc135cda4a907cf7"
+    },
+    {
+      "path": "SHP/Polygon_MixedMultiPart_Parcels.prj",
+      "sha256": "2b1b17dfd34d0335c56ad5d2c6974d15ee9a0ca573091f3e9657c3d8730dd7d6"
+    },
+    {
+      "path": "SHP/Polygon_MixedMultiPart_Parcels.shp",
+      "sha256": "240b3d2f9437060ed51a21ffd60584f99dbe23ded6ce1a3322a0f09a22032914"
+    },
+    {
+      "path": "SHP/Polygon_MixedMultiPart_Parcels.shx",
+      "sha256": "802760377943edde37ac6b30a54b9dd53348021da7891e253aac32a21adc7588"
+    },
+    {
+      "path": "SHP/Polygons_Single_Buildings.cpg",
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+    },
+    {
+      "path": "SHP/Polygons_Single_Buildings.dbf",
+      "sha256": "005fc685d5a01ca8bacf0fbda2ed0b65691ece3a1676c3ff81a870da5bd90519"
+    },
+    {
+      "path": "SHP/Polygons_Single_Buildings.prj",
+      "sha256": "2b1b17dfd34d0335c56ad5d2c6974d15ee9a0ca573091f3e9657c3d8730dd7d6"
+    },
+    {
+      "path": "SHP/Polygons_Single_Buildings.shp",
+      "sha256": "e34a2cfa75aec3c9f9526afdda7ffdb533cf4f3c898e97269b038d4ab810d072"
+    },
+    {
+      "path": "SHP/Polygons_Single_Buildings.shx",
+      "sha256": "33e81b933e8bb7b68f82efd7cad4fbdf82f923682dc83ae7aae8a0a1efdbbe87"
+    },
+    {
+      "path": "SHP/Polyline_MultipartMix_Streets.cpg",
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824"
+    },
+    {
+      "path": "SHP/Polyline_MultipartMix_Streets.dbf",
+      "sha256": "a5b3c18aeb8e53981b72b29cd93a91e4910c42ccc752e110bd5433a3dd339415"
+    },
+    {
+      "path": "SHP/Polyline_MultipartMix_Streets.prj",
+      "sha256": "2b1b17dfd34d0335c56ad5d2c6974d15ee9a0ca573091f3e9657c3d8730dd7d6"
+    },
+    {
+      "path": "SHP/Polyline_MultipartMix_Streets.shp",
+      "sha256": "0ef5942f5f1ef3ade5bb85527dfdb20b4f0d69b4f329434dc50743feec33d94a"
+    },
+    {
+      "path": "SHP/Polyline_MultipartMix_Streets.shx",
+      "sha256": "864db0bc309a1880983b564832bdc6d323b7beeb6622aa7b7ef19de10c758cf9"
+    }
+  ]
+}

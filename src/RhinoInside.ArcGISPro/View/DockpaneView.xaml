@@ -1,0 +1,963 @@
+<UserControl x:Class="RhinoInside.ArcGISPro.DockpaneView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:ui="clr-namespace:RhinoInside.ArcGISPro"
+             xmlns:extensions="clr-namespace:ArcGIS.Desktop.Extensions;assembly=ArcGIS.Desktop.Extensions"
+             mc:Ignorable="d"
+             AutomationProperties.Name="Rhino.Inside ArcGIS synchronization"
+             Background="{DynamicResource Esri_DockPaneClientAreaBackgroundBrush}"
+             KeyboardNavigation.TabNavigation="Continue"
+             KeyboardNavigation.ControlTabNavigation="Continue"
+             d:DesignHeight="720" d:DesignWidth="480"
+             d:DataContext="{Binding Path=ui.DockpaneViewModel}">
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <extensions:DesignOnlyResourceDictionary Source="pack://application:,,,/ArcGIS.Desktop.Framework;component\Themes\Default.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+
+      <Style x:Key="SectionHeader" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,10,0,3"/>
+      </Style>
+      <Style x:Key="FirstSectionHeader" TargetType="TextBlock" BasedOn="{StaticResource SectionHeader}">
+        <Setter Property="Margin" Value="0,4,0,4"/>
+      </Style>
+      <Style x:Key="Hint" TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Opacity" Value="0.75"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+      </Style>
+      <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <Setter Property="Opacity" Value="0.75"/>
+        <Setter Property="Margin" Value="0,2,8,2"/>
+      </Style>
+      <Style x:Key="FieldValue" TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="Margin" Value="0,2,0,2"/>
+      </Style>
+      <Style x:Key="ActionButton" TargetType="Button">
+        <Setter Property="Padding" Value="8,3"/>
+        <Setter Property="MinWidth" Value="72"/>
+        <Setter Property="MinHeight" Value="28"/>
+      </Style>
+      <Style x:Key="CompactActionButton" TargetType="Button" BasedOn="{StaticResource ActionButton}">
+        <Setter Property="Padding" Value="6,2"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="Margin" Value="0,0,5,0"/>
+      </Style>
+      <Style x:Key="ActionGlyph" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+      </Style>
+      <Style x:Key="ActionLabel" TargetType="TextBlock">
+        <Setter Property="Margin" Value="5,0,0,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+      </Style>
+      <Style x:Key="InfoButton" TargetType="Button">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="MinWidth" Value="24"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="6,0,0,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="Content" Value="&#xE946;"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="ToolTipService.InitialShowDelay" Value="250"/>
+      </Style>
+      <Style x:Key="CompactDataGrid" TargetType="DataGrid">
+        <Setter Property="RowHeight" Value="28"/>
+        <Setter Property="ColumnHeaderHeight" Value="26"/>
+        <Setter Property="HeadersVisibility" Value="Column"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="RowHeaderWidth" Value="0"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Esri_BorderBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+      </Style>
+      <Style x:Key="TabPage" TargetType="ScrollViewer">
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="Padding" Value="8,4,8,8"/>
+        <Setter Property="Background" Value="{DynamicResource Esri_DockPaneClientAreaBackgroundBrush}"/>
+      </Style>
+
+      <!-- Tabs the way Pro's own panes (History, Catalog) draw them: plain text headers with no
+           box, the selected one underlined in the Esri accent. The framework has no reusable
+           style for this, so it is templated here against Pro's brushes so it follows the theme. -->
+      <Style x:Key="ProTabControl" TargetType="TabControl">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Background" Value="{DynamicResource Esri_DockPaneClientAreaBackgroundBrush}"/>
+        <Setter Property="KeyboardNavigation.TabNavigation" Value="Continue"/>
+        <Setter Property="KeyboardNavigation.ControlTabNavigation" Value="Continue"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="TabControl">
+              <DockPanel Background="{TemplateBinding Background}" KeyboardNavigation.TabNavigation="Continue">
+                <Border DockPanel.Dock="Top" Padding="10,2,10,0" BorderThickness="0,0,0,1"
+                        BorderBrush="{DynamicResource Esri_BorderBrush}">
+                  <!-- A plain row, not a TabPanel: inside Pro the TabPanel arranged each header
+                       narrower than its text and clipped it ("Rh", "Sy"). The sub-tab strip below
+                       uses the same construction and lays out correctly. -->
+                  <StackPanel IsItemsHost="True" Orientation="Horizontal" Background="Transparent"/>
+                </Border>
+                <ContentPresenter ContentSource="SelectedContent"
+                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                  KeyboardNavigation.TabNavigation="Continue"/>
+              </DockPanel>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <Style x:Key="ProTabItem" TargetType="TabItem">
+        <Setter Property="Foreground" Value="{DynamicResource Esri_TextControlBrush}"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Padding" Value="0,6,0,5"/>
+        <Setter Property="Margin" Value="0,0,16,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="TabItem">
+              <Grid Background="Transparent">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="*"/>
+                  <RowDefinition Height="2"/>
+                </Grid.RowDefinitions>
+                <TextBlock x:Name="Header" Text="{TemplateBinding Header}" Margin="{TemplateBinding Padding}"
+                           VerticalAlignment="Center" HorizontalAlignment="Left"
+                           Foreground="{TemplateBinding Foreground}"/>
+                <Border x:Name="Underline" Grid.Row="1" Background="Transparent" Margin="0,0,0,-1"/>
+              </Grid>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                  <Setter Property="IsTabStop" Value="True"/>
+                  <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Esri_Blue}"/>
+                  <Setter Property="Foreground" Value="{DynamicResource Esri_TextStyleEmphasisBrush}"/>
+                  <Setter TargetName="Header" Property="FontWeight" Value="SemiBold"/>
+                </Trigger>
+                <MultiTrigger>
+                  <MultiTrigger.Conditions>
+                    <Condition Property="IsMouseOver" Value="True"/>
+                    <Condition Property="IsSelected" Value="False"/>
+                  </MultiTrigger.Conditions>
+                  <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Esri_Gray125}"/>
+                </MultiTrigger>
+                <Trigger Property="IsEnabled" Value="False">
+                  <Setter Property="Foreground" Value="{DynamicResource Esri_TextStyleDisabledBrush}"/>
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+      <!-- Sub-tab buttons under the Sync tab: an icon over a label, the selected one underlined,
+           the way Pro's History pane draws the buttons beneath its text tabs. -->
+      <Style x:Key="SubTabButton" TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{DynamicResource Esri_TextControlBrush}"/>
+        <Setter Property="Margin" Value="0,0,18,0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="RadioButton">
+              <Grid Background="Transparent">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="*"/>
+                  <RowDefinition Height="2"/>
+                </Grid.RowDefinitions>
+                <StackPanel Margin="4,2,4,5" HorizontalAlignment="Center">
+                  <TextBlock x:Name="Icon" Text="{TemplateBinding Tag}" FontFamily="Segoe MDL2 Assets" FontSize="20"
+                             HorizontalAlignment="Center" Foreground="{TemplateBinding Foreground}"/>
+                  <TextBlock x:Name="Label" Text="{TemplateBinding Content}" FontSize="11" Margin="0,3,0,0"
+                             HorizontalAlignment="Center" Foreground="{TemplateBinding Foreground}"/>
+                </StackPanel>
+                <Border x:Name="Underline" Grid.Row="1" Background="Transparent" Margin="0,0,0,-1"/>
+              </Grid>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                  <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Esri_Blue}"/>
+                  <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource Esri_Blue}"/>
+                  <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Esri_TextStyleEmphasisBrush}"/>
+                  <Setter TargetName="Label" Property="FontWeight" Value="SemiBold"/>
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                  <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Esri_Blue}"/>
+                  <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource Esri_Blue}"/>
+                  <Setter TargetName="Label" Property="FontWeight" Value="SemiBold"/>
+                </Trigger>
+                <MultiTrigger>
+                  <MultiTrigger.Conditions>
+                    <Condition Property="IsMouseOver" Value="True"/>
+                    <Condition Property="IsChecked" Value="False"/>
+                  </MultiTrigger.Conditions>
+                  <Setter TargetName="Underline" Property="Background" Value="{DynamicResource Esri_Gray125}"/>
+                </MultiTrigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+
+      <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+      <ui:ZeroToVisibilityConverter x:Key="ZeroToVis"/>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <DockPanel>
+
+    <!-- Global header: what this is and whether Rhino is up. Visible on every tab. -->
+    <Border DockPanel.Dock="Top" Padding="8,6,8,2">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+          <Ellipse Width="10" Height="10" VerticalAlignment="Center" Fill="{Binding StatusColor}"/>
+          <TextBlock Text="{Binding StatusText}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+        </StackPanel>
+        <TextBlock Text="Rhino.Inside" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/>
+      </DockPanel>
+    </Border>
+
+    <!-- Help opened by the keyboard-focusable information buttons. Unlike a tooltip, this stays
+         visible long enough to read and is announced by screen readers when its content changes. -->
+    <Border DockPanel.Dock="Top" Margin="8,3,8,6" Padding="9,7" CornerRadius="3"
+            BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}"
+            Background="{DynamicResource Esri_DialogFrameBackgroundBrush}"
+            Visibility="{Binding IsHelpVisible, Converter={StaticResource BoolToVis}}"
+            AutomationProperties.Name="Context help" AutomationProperties.LiveSetting="Polite">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Command="{Binding CloseHelpCommand}" Style="{StaticResource InfoButton}"
+                Content="&#xE711;" Margin="8,0,0,0" ToolTip="Close this help message"
+                AutomationProperties.Name="Close context help"
+                AutomationProperties.HelpText="Closes the current explanation without changing any settings."/>
+        <StackPanel>
+          <TextBlock Text="{Binding HelpTitle}" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding HelpText}" Margin="0,3,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- While a pull, preview or apply runs: a moving bar, what it is doing now, how long it has
+         been going, and for a large layer how long to expect. Visible on every tab. -->
+    <Border DockPanel.Dock="Top" Margin="8,0,8,6" Padding="8,6" CornerRadius="3"
+            BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}"
+            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"
+            AutomationProperties.Name="Sync progress" AutomationProperties.LiveSetting="Polite">
+      <StackPanel>
+        <ProgressBar IsIndeterminate="{Binding IsBusy}" Height="4" Margin="0,0,0,6"
+                     AutomationProperties.Name="Working"/>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Right" Text="{Binding BusyElapsed}" Margin="8,0,0,0"
+                     Foreground="{DynamicResource Esri_TextControlBrush}" ToolTip="Time since this run started"/>
+          <TextBlock Text="{Binding BusyPhase}" TextWrapping="Wrap"/>
+        </DockPanel>
+        <TextBlock Text="{Binding BusyNotice}" TextWrapping="Wrap" Margin="0,4,0,0" FontStyle="Italic"
+                   Visibility="{Binding HasBusyNotice, Converter={StaticResource BoolToVis}}"/>
+      </StackPanel>
+    </Border>
+
+    <TabControl x:Name="MainTabs" Style="{StaticResource ProTabControl}"
+                PreviewKeyDown="MainTabs_PreviewKeyDown">
+
+      <!-- ============================ Rhino ============================ -->
+      <TabItem Header="Rhino" Style="{StaticResource ProTabItem}" AutomationProperties.Name="Rhino host">
+        <ScrollViewer Style="{StaticResource TabPage}">
+          <StackPanel>
+            <Grid Margin="0,4,0,8">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Text="Hosts Rhino 8 inside the ArcGIS Pro process." Style="{StaticResource Hint}" Margin="0" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="rhino-host"
+                      Style="{StaticResource InfoButton}" ToolTip="Explain the embedded Rhino host controls"
+                      AutomationProperties.Name="About the Rhino host"
+                      AutomationProperties.HelpText="Opens persistent guidance for launching, showing, and refreshing Rhino."/>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal">
+              <Button Command="{Binding LaunchCommand}" Style="{StaticResource ActionButton}" MinWidth="100"
+                      ToolTip="Initialize Rhino 8 inside this ArcGIS Pro process"
+                      AutomationProperties.Name="Launch Rhino" AutomationProperties.HelpText="Starts the embedded Rhino host. This does not open a separate Rhino process.">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE768;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Launch Rhino" Style="{StaticResource ActionLabel}"/></StackPanel>
+              </Button>
+              <Button Command="{Binding ShowRhinoCommand}" Style="{StaticResource ActionButton}" Margin="6,0,0,0"
+                      ToolTip="Bring the embedded Rhino window to the front"
+                      AutomationProperties.Name="Show Rhino" AutomationProperties.HelpText="Restores the embedded Rhino window without changing the document.">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE890;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Show" Style="{StaticResource ActionLabel}"/></StackPanel>
+              </Button>
+              <Button Command="{Binding RefreshCommand}" Style="{StaticResource ActionButton}" MinWidth="70" Margin="6,0,0,0"
+                      ToolTip="Reread Rhino document, layer, link, and selection information; makes no changes"
+                      AutomationProperties.Name="Refresh Rhino information" AutomationProperties.HelpText="Refreshes displayed Rhino information without changing either model.">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE72C;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Refresh" Style="{StaticResource ActionLabel}"/></StackPanel>
+              </Button>
+            </StackPanel>
+
+            <TextBlock Text="Active document" Style="{StaticResource SectionHeader}"/>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+              </Grid.RowDefinitions>
+
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DocumentName}" Style="{StaticResource FieldValue}"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Path" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DocumentPath}" Style="{StaticResource FieldValue}" ToolTip="{Binding DocumentPath}"/>
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Objects" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ObjectCount}" Style="{StaticResource FieldValue}"/>
+              <TextBlock Grid.Row="3" Grid.Column="0" Text="Layers" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LayerCount}" Style="{StaticResource FieldValue}"/>
+              <TextBlock Grid.Row="4" Grid.Column="0" Text="Units" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding ModelUnits}" Style="{StaticResource FieldValue}"/>
+              <TextBlock Grid.Row="5" Grid.Column="0" Text="Layer links" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding LinkCount}" Style="{StaticResource FieldValue}"/>
+            </Grid>
+
+            <TextBlock Text="Tracked layers" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Text="Rhino layers holding synced objects — the ones a sync can pick up again after the file is reopened."
+                       Style="{StaticResource Hint}"/>
+            <DataGrid x:Name="TrackedLayerGrid" ItemsSource="{Binding TrackedLayers}" AutoGenerateColumns="False" IsReadOnly="True"
+                      MaxHeight="250" Margin="0,1,0,0" AutomationProperties.Name="Tracked layer pairs">
+              <DataGrid.Style>
+                <Style TargetType="DataGrid" BasedOn="{StaticResource CompactDataGrid}">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding TrackedLayerCount}" Value="0">
+                      <Setter Property="Visibility" Value="Collapsed"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </DataGrid.Style>
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Layer pair" Binding="{Binding Pair}" Width="*" MinWidth="140"/>
+                <DataGridTextColumn Header="Tracked" Binding="{Binding Tracked}" Width="55"/>
+                <DataGridTextColumn Header="Parts" Binding="{Binding Parts}" Width="45"/>
+                <DataGridTextColumn Header="Total" Binding="{Binding Total}" Width="45"/>
+              </DataGrid.Columns>
+            </DataGrid>
+            <TextBlock Text="None yet — pull a layer to start tracking it." Style="{StaticResource Hint}"
+                       Visibility="{Binding TrackedLayerCount, Converter={StaticResource ZeroToVis}}"/>
+
+            <!-- Hosted inside Pro, Rhino's own Properties panel does not show a selected object's
+                 user text, so it is shown here instead, following the selection in Rhino. -->
+            <TextBlock Text="Selected object" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Text="{Binding SelectedObjectTitle}" Style="{StaticResource Hint}" TextWrapping="Wrap"/>
+            <DataGrid x:Name="SelectedObjectGrid" ItemsSource="{Binding SelectedObjectRows}" AutoGenerateColumns="False" IsReadOnly="True"
+                      Style="{StaticResource CompactDataGrid}" MaxHeight="280"
+                      AutomationProperties.Name="Selected Rhino object attributes"
+                      Visibility="{Binding HasSelectedObject, Converter={StaticResource BoolToVis}}">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Key" Binding="{Binding Key}" Width="*" MinWidth="110"/>
+                <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="*" MinWidth="110"/>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <TextBlock Text="Host" Style="{StaticResource SectionHeader}"/>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+              </Grid.RowDefinitions>
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Version" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding RhinoVersion}" Style="{StaticResource FieldValue}"/>
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="RhinoCommon" Style="{StaticResource FieldLabel}"/>
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding RhinoCommonPath}" Style="{StaticResource FieldValue}" ToolTip="{Binding RhinoCommonPath}"/>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <!-- ============================ Sync ============================ -->
+      <TabItem x:Name="SyncTopTab" Header="Sync" Style="{StaticResource ProTabItem}" AutomationProperties.Name="Synchronization">
+        <DockPanel x:Name="SyncWorkspaceHost" KeyboardNavigation.TabNavigation="Continue">
+
+          <!-- Sub-tabs, drawn like the icon buttons under Pro's History tabs. -->
+          <Border DockPanel.Dock="Top" Padding="8,4,8,0" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Esri_BorderBrush}">
+            <!-- In the order of the work: pair the layers, bring ArcGIS in, then the everyday sync loop.
+                 Profile is the advanced per-field contract, so it comes last. -->
+            <StackPanel Orientation="Horizontal" KeyboardNavigation.TabNavigation="Continue">
+              <RadioButton x:Name="LinkSubTabButton" Style="{StaticResource SubTabButton}" Tag="&#xE71B;" Content="Link" GroupName="SyncSubTabs"
+                           IsChecked="{Binding IsLinkSubTab, Mode=OneWay}" Command="{Binding ShowSubTabCommand}" CommandParameter="Link"
+                           Click="SubTab_Click"
+                           AutomationProperties.Name="Manage layer links"
+                           ToolTip="Pair ArcGIS layers with Rhino layers and choose the active pair"/>
+              <RadioButton x:Name="PullSubTabButton" Style="{StaticResource SubTabButton}" Tag="&#xE896;" Content="Pull" GroupName="SyncSubTabs"
+                           IsChecked="{Binding IsPullSubTab, Mode=OneWay}" Command="{Binding ShowSubTabCommand}" CommandParameter="Pull"
+                           Click="SubTab_Click"
+                           AutomationProperties.Name="Pull from ArcGIS"
+                           ToolTip="Bring the active pair's ArcGIS features into Rhino"/>
+              <RadioButton x:Name="SyncSubTabButton" Style="{StaticResource SubTabButton}" Tag="&#xE895;" Content="Sync" GroupName="SyncSubTabs"
+                           IsChecked="{Binding IsSyncSubTab, Mode=OneWay}" Command="{Binding ShowSubTabCommand}" CommandParameter="Sync"
+                           Click="SubTab_Click"
+                           AutomationProperties.Name="Review synchronization changes"
+                           ToolTip="Preview and apply the active layer pair"/>
+              <RadioButton x:Name="ProfileSubTabButton" Style="{StaticResource SubTabButton}" Tag="&#xE8A5;" Content="Profile" GroupName="SyncSubTabs"
+                           IsChecked="{Binding IsProfileSubTab, Mode=OneWay}" Command="{Binding ShowSubTabCommand}" CommandParameter="Profile"
+                           Click="SubTab_Click"
+                           AutomationProperties.Name="Author synchronization profile"
+                           AutomationProperties.HelpText="Choose the fields, Rhino keys, validators, units, and ownership rules saved with the active layer pair."
+                           ToolTip="Choose per-field mappings and ownership for the active pair"/>
+            </StackPanel>
+          </Border>
+
+          <!-- The active pair, on every sub-tab: it is what Pull and Sync act on, and it can be
+               switched here without going back to the Link table. -->
+          <Border DockPanel.Dock="Top" Padding="8,5" Background="{DynamicResource Esri_DialogFrameBackgroundBrush}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <ComboBox ItemsSource="{Binding Links}" SelectedItem="{Binding ActiveLink, Mode=TwoWay}" DisplayMemberPath="Title"
+                        Visibility="{Binding HasLinks, Converter={StaticResource BoolToVis}}"
+                        AutomationProperties.Name="Active layer pair"
+                        AutomationProperties.HelpText="Selects the layer pair used by Profile, Pull, Preview, and Apply."
+                        ToolTip="{Binding ActiveLinkTitle}"/>
+              <TextBlock Text="No layer pair yet — add one on the Link tab." Style="{StaticResource Hint}" Margin="0"
+                         Visibility="{Binding LinkCount, Converter={StaticResource ZeroToVis}}"/>
+              <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="active-pair"
+                      Style="{StaticResource InfoButton}" ToolTip="Explain the active layer pair"
+                      AutomationProperties.Name="About the active layer pair"
+                      AutomationProperties.HelpText="Opens persistent guidance about which pair Profile, Pull, Preview, and Apply use."/>
+            </Grid>
+          </Border>
+
+          <!-- Links, baselines and profiles live in the .3dm. An unsaved document is the usual reason
+               links "forget" themselves next session, so say so where the work happens. -->
+          <Border DockPanel.Dock="Top" Padding="8,6" Margin="8,4,8,0" BorderThickness="1" CornerRadius="3"
+                  BorderBrush="#D9A53A" Visibility="{Binding ShowDocumentWarning, Converter={StaticResource BoolToVis}}"
+                  AutomationProperties.Name="Rhino document not saved">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" Foreground="#D9A53A" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              <TextBlock Grid.Column="1" Text="{Binding DocumentWarning}" TextWrapping="Wrap" VerticalAlignment="Center"/>
+              <Button Grid.Column="2" Command="{Binding SaveRhinoDocumentCommand}" Style="{StaticResource CompactActionButton}" Margin="8,0,0,0"
+                      ToolTip="Save the Rhino document so its layer links and sync baselines come back next session"
+                      AutomationProperties.Name="Save Rhino document">
+                <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74E;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Save" Style="{StaticResource ActionLabel}"/></StackPanel>
+              </Button>
+            </Grid>
+          </Border>
+
+          <!-- ArcGIS Pro's custom TabControl content presenter does not reliably propagate the
+               dockpane DataContext one level deeper. The code-behind mirrors the root context onto
+               this named boundary so every mutually-exclusive workspace and list stays live. -->
+          <Grid x:Name="SubTabWorkspace"
+                Background="{DynamicResource Esri_DockPaneClientAreaBackgroundBrush}"
+                KeyboardNavigation.TabNavigation="Continue">
+
+            <!-- Sync area -->
+            <ScrollViewer x:Name="SyncArea" Style="{StaticResource TabPage}" Visibility="{Binding IsSyncSubTab, Converter={StaticResource BoolToVis}}">
+              <StackPanel>
+                <Grid Margin="0,4,0,8">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="Preview compares both sides and writes nothing. Apply writes what the link's direction allows; conflicts and deletions are held for you to decide."
+                             Style="{StaticResource Hint}" Margin="0" VerticalAlignment="Center"/>
+                  <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="preview-apply"
+                          Style="{StaticResource InfoButton}" ToolTip="Explain safe Preview and Apply behavior"
+                          AutomationProperties.Name="About Preview and Apply"
+                          AutomationProperties.HelpText="Opens persistent guidance about comparing and writing synchronized changes."/>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal">
+                  <Button Command="{Binding PreviewSyncCommand}" Style="{StaticResource ActionButton}"
+                          ToolTip="Read-only comparison of both sides against the last sync baseline"
+                          AutomationProperties.Name="Preview active layer pair" AutomationProperties.HelpText="Compares both sides and writes nothing.">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE890;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Preview" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                  <Button Command="{Binding ApplySyncCommand}" Style="{StaticResource ActionButton}" Margin="6,0,0,0"
+                          ToolTip="Recompute and write allowed changes; conflicts follow the Settings policy"
+                          AutomationProperties.Name="Apply active layer pair" AutomationProperties.HelpText="Writes allowed changes for the active pair and updates its baseline.">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE895;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Apply" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                </StackPanel>
+
+                <TextBlock Text="{Binding SyncSummary}" TextWrapping="Wrap" Margin="0,10,0,0"/>
+                <TextBlock Text="{Binding StaleNotice}" TextWrapping="Wrap" Margin="0,4,0,0" Foreground="#D9A53A"
+                           Visibility="{Binding IsPreviewStale, Converter={StaticResource BoolToVis}}"
+                           AutomationProperties.Name="Preview is out of date"/>
+
+                <ItemsControl ItemsSource="{Binding Rollup}" Margin="0,8,0,0">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}" CornerRadius="3" Padding="6,3" Margin="0,0,6,6">
+                        <StackPanel Orientation="Horizontal">
+                          <TextBlock Text="{Binding Glyph}" Foreground="{Binding GlyphColor}" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Count}" FontWeight="SemiBold" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding Label}" Opacity="0.75" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Grid Margin="0,2,0,4">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="Change review" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Border Background="{DynamicResource Esri_DialogFrameBackgroundBrush}" CornerRadius="8" Margin="5,0,0,0" Padding="6,1">
+                      <TextBlock Text="{Binding ChangedCount}" FontSize="11"/>
+                    </Border>
+                    <Button Command="{Binding ShowHelpCommand}" CommandParameter="change-review"
+                            Style="{StaticResource InfoButton}" ToolTip="Explain change states and filtering"
+                            AutomationProperties.Name="About the change review"
+                            AutomationProperties.HelpText="Opens persistent guidance for reading and filtering the comparison rows."/>
+                  </StackPanel>
+                  <CheckBox Content="Needs action only" IsChecked="{Binding ShowOnlyChanged, Mode=TwoWay}"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.Name="Show only changes that need action"/>
+                </Grid>
+
+                <DataGrid x:Name="ChangeReviewGrid" ItemsSource="{Binding SyncRows}" AutoGenerateColumns="False" IsReadOnly="True"
+                          Style="{StaticResource CompactDataGrid}" RowHeight="38" MaxHeight="340"
+                          AutomationProperties.Name="Synchronization change review"
+                          AutomationProperties.HelpText="Double-click a row to select its object in Rhino and its feature in ArcGIS."
+                          MouseDoubleClick="ChangeReviewGrid_MouseDoubleClick"
+                          HeadersVisibility="None" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <DataGrid.Columns>
+                    <DataGridTemplateColumn Width="*">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <Grid Margin="4,3" ToolTip="{Binding Context}">
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="18"/>
+                              <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Glyph}" Foreground="{Binding GlyphColor}" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Top"/>
+                            <StackPanel Grid.Column="1">
+                              <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding State}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Side}" Opacity="0.7" Margin="7,0,0,0"/>
+                              </StackPanel>
+                              <TextBlock Text="{Binding Summary}" Opacity="0.72" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                          </Grid>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+              </StackPanel>
+            </ScrollViewer>
+
+            <!-- Pull area -->
+            <ScrollViewer x:Name="PullArea" Style="{StaticResource TabPage}" Visibility="{Binding IsPullSubTab, Converter={StaticResource BoolToVis}}">
+              <StackPanel>
+                <Grid Margin="0,4,0,8">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="Brings the active pair's ArcGIS features into its Rhino layer as tracked objects. Features already in Rhino are skipped, so pulling again only restores what is missing; use Sync to update what is there."
+                             Style="{StaticResource Hint}" Margin="0" VerticalAlignment="Center"/>
+                  <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="pull"
+                          Style="{StaticResource InfoButton}" ToolTip="Explain when to use Pull instead of Sync"
+                          AutomationProperties.Name="About pulling into Rhino"
+                          AutomationProperties.HelpText="Opens persistent guidance about pulling and how it differs from Sync."/>
+                </Grid>
+                <Button Command="{Binding PullCommand}" Style="{StaticResource ActionButton}" HorizontalAlignment="Left"
+                        ToolTip="Create tracked Rhino objects for every ArcGIS feature not already on the Rhino layer"
+                        AutomationProperties.Name="Pull active ArcGIS layer into Rhino" AutomationProperties.HelpText="Creates tracked Rhino objects from all features in the active ArcGIS layer.">
+                  <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE896;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Pull into Rhino" Style="{StaticResource ActionLabel}"/></StackPanel>
+                </Button>
+                <Border Padding="8" BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}" CornerRadius="3" Margin="0,10,0,0">
+                  <TextBlock Text="{Binding PullSummary}" TextWrapping="Wrap"/>
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
+
+            <!-- Profile area -->
+            <ScrollViewer x:Name="ProfileArea" Style="{StaticResource TabPage}"
+                          Visibility="{Binding IsProfileSubTab, Converter={StaticResource BoolToVis}}"
+                          KeyboardNavigation.TabNavigation="Continue">
+              <StackPanel>
+                <Grid Margin="0,4,0,6">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <StackPanel>
+                    <TextBlock Text="Per-link profile" FontWeight="SemiBold"/>
+                    <TextBlock Text="Choose exactly which attributes cross between ArcGIS and Rhino." Style="{StaticResource Hint}" Margin="0,2,0,0"/>
+                  </StackPanel>
+                  <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="profile"
+                          Style="{StaticResource InfoButton}" ToolTip="Explain field mapping and ownership rules"
+                          AutomationProperties.Name="About synchronization profiles"
+                          AutomationProperties.HelpText="Opens persistent guidance about saved per-link field mappings and ownership."/>
+                </Grid>
+
+                <Border Padding="8" BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}" CornerRadius="3" Margin="0,0,0,8">
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="Name" Style="{StaticResource FieldLabel}"/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ProfileProjectName, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="A descriptive name stored in this link's profile"
+                             AutomationProperties.Name="Profile name"/>
+                    <TextBlock Grid.Row="1" Text="ArcGIS CRS" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ProfileCrs}" Style="{StaticResource FieldValue}"
+                               TextTrimming="CharacterEllipsis" ToolTip="{Binding ProfileCrs}"/>
+                    <TextBlock Grid.Row="2" Text="Shape" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ProfileGeometryTarget}" Style="{StaticResource FieldValue}"/>
+                  </Grid>
+                </Border>
+
+                <Grid Margin="0,0,0,4">
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                  <TextBlock Text="Field mappings" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <TextBlock Grid.Column="1" VerticalAlignment="Center" Opacity="0.75">
+                    <Run Text="{Binding IncludedProfileFieldCount, Mode=OneWay}"/><Run Text=" included"/>
+                  </TextBlock>
+                </Grid>
+                <DataGrid x:Name="ProfileFieldGrid" ItemsSource="{Binding ProfileFields}" SelectedItem="{Binding SelectedProfileField, Mode=TwoWay}"
+                          SelectionChanged="ProfileFieldGrid_SelectionChanged"
+                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                          SelectionMode="Single" SelectionUnit="FullRow" MinHeight="150" MaxHeight="280"
+                          Style="{StaticResource CompactDataGrid}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          KeyboardNavigation.TabNavigation="Continue"
+                          AutomationProperties.Name="Profile field mappings"
+                          AutomationProperties.HelpText="Select a field to edit its key, units, validators, and ownership below.">
+                  <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="Use" Binding="{Binding Included, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="45"/>
+                    <DataGridTextColumn Header="ArcGIS field" Binding="{Binding ArcGisField}" IsReadOnly="True" Width="*" MinWidth="90"/>
+                    <DataGridTextColumn Header="Rhino key" Binding="{Binding RhinoKey, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Width="*" MinWidth="90"/>
+                    <DataGridTemplateColumn Header="Owner" Width="105">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <ComboBox ItemsSource="{Binding DataContext.FieldOwnershipChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    DisplayMemberPath="Label" SelectedValuePath="Value"
+                                    SelectedValue="{Binding Owner, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    IsEnabled="{Binding CanChooseOwner}" BorderThickness="0" Background="Transparent"
+                                    ToolTip="{Binding Detail}" AutomationProperties.Name="Field ownership"/>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+
+                <Border x:Name="ProfileFieldDetail" Padding="8" BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}" CornerRadius="3" Margin="0,8,0,8"
+                        DataContext="{Binding SelectedItem, ElementName=ProfileFieldGrid}">
+                  <StackPanel>
+                    <TextBlock x:Name="ProfileFieldDetailText" Text="{Binding Detail}" TextWrapping="Wrap" Style="{StaticResource Hint}"/>
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                      </Grid.RowDefinitions>
+                      <TextBlock Grid.Row="0" Text="Rhino key" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                      <TextBox x:Name="ProfileRhinoKeyText" Grid.Row="0" Grid.Column="1" Text="{Binding RhinoKey, UpdateSourceTrigger=PropertyChanged}"
+                               ToolTip="User-text key read from and written to Rhino objects"
+                               AutomationProperties.Name="Selected field Rhino user text key"/>
+                      <TextBlock Grid.Row="1" Text="Units" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                      <TextBox x:Name="ProfileUnitsText" Grid.Row="1" Grid.Column="1" Text="{Binding Units, UpdateSourceTrigger=PropertyChanged}"
+                               ToolTip="Optional unit hint such as meters or square_meters"
+                               AutomationProperties.Name="Selected field units"/>
+                      <TextBlock Grid.Row="2" Text="Validators" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                      <TextBox x:Name="ProfileValidatorsText" Grid.Row="2" Grid.Column="1" Text="{Binding ValidatorsText, UpdateSourceTrigger=PropertyChanged}"
+                               ToolTip="Optional semicolon-separated rules, for example positive_number; range:[0,20]"
+                               AutomationProperties.Name="Selected field validators"/>
+                      <TextBlock Grid.Row="3" Text="Domain" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+                      <TextBlock x:Name="ProfileDomainText" Grid.Row="3" Grid.Column="1" Text="{Binding DomainSummary}" Style="{StaticResource FieldValue}"
+                                 TextTrimming="CharacterEllipsis" ToolTip="{Binding DomainSummary}"/>
+                    </Grid>
+                  </StackPanel>
+                </Border>
+
+                <WrapPanel>
+                  <Button Command="{Binding SaveProfileCommand}" Style="{StaticResource ActionButton}"
+                          ToolTip="Validate and save these mappings with the active link before Preview or Apply"
+                          AutomationProperties.Name="Save synchronization profile"
+                          AutomationProperties.HelpText="Validates and stores this profile in the Rhino document with the active layer pair.">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74E;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Save profile" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                  <Button Command="{Binding RestoreProfileCommand}" Style="{StaticResource ActionButton}" Margin="6,0,0,0"
+                          ToolTip="Remove this custom profile and regenerate safe ArcGIS-owned defaults from the live schema"
+                          AutomationProperties.Name="Restore generated profile defaults"
+                          AutomationProperties.HelpText="Removes the custom profile; the active link will use regenerated safe defaults.">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE777;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Restore defaults" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                </WrapPanel>
+                <TextBlock Text="{Binding ProfileStatus}" Style="{StaticResource Hint}" Margin="0,7,0,0"
+                           AutomationProperties.LiveSetting="Polite"/>
+              </StackPanel>
+            </ScrollViewer>
+
+            <!-- Link area -->
+            <DockPanel x:Name="LinkArea" Visibility="{Binding IsLinkSubTab, Converter={StaticResource BoolToVis}}" Margin="8,4,8,8"
+                       Background="{DynamicResource Esri_DockPaneClientAreaBackgroundBrush}">
+              <TextBlock DockPanel.Dock="Top" Text="Pair ArcGIS layers with Rhino layers. The selected row is the active pair. Rows are saved in the Rhino document."
+                         Style="{StaticResource Hint}" Margin="0,2,0,5"/>
+
+              <Grid DockPanel.Dock="Top" Margin="0,0,0,5">
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                  <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                  <TextBlock Text="Layer links" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                  <Border Background="{DynamicResource Esri_DialogFrameBackgroundBrush}" CornerRadius="8" Margin="5,0,0,0" Padding="6,1">
+                    <TextBlock Text="{Binding LinkCount}" FontSize="11"/>
+                  </Border>
+                  <Button Command="{Binding ShowHelpCommand}" CommandParameter="layer-links"
+                          Style="{StaticResource InfoButton}" ToolTip="Explain saved links and synchronization directions"
+                          AutomationProperties.Name="About layer links and directions"
+                          AutomationProperties.HelpText="Opens persistent guidance about layer pairs and direction choices."/>
+                </StackPanel>
+                <WrapPanel Grid.Row="1" HorizontalAlignment="Left">
+                  <Button Command="{Binding AddLinkCommand}" Style="{StaticResource CompactActionButton}" ToolTip="Add a saved ArcGIS-to-Rhino layer pair" AutomationProperties.Name="Add layer link">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE710;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Add" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                  <Button Command="{Binding RemoveLinkCommand}" Style="{StaticResource CompactActionButton}" ToolTip="Remove only the selected link; linked objects and features are not deleted" AutomationProperties.Name="Remove selected layer link">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74D;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Remove" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                  <Button Command="{Binding PreviewAllCommand}" Style="{StaticResource CompactActionButton}" ToolTip="Read-only comparison of every complete link" AutomationProperties.Name="Preview all layer links">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE890;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Preview all" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                  <Button Command="{Binding ApplyAllCommand}" Style="{StaticResource CompactActionButton}" Margin="0" ToolTip="Write allowed changes for every complete link; conflicts follow Settings" AutomationProperties.Name="Apply all layer links">
+                    <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE895;" Style="{StaticResource ActionGlyph}"/><TextBlock Text="Apply all" Style="{StaticResource ActionLabel}"/></StackPanel>
+                  </Button>
+                </WrapPanel>
+                <Grid Grid.Row="2" Margin="0,5,0,0" IsEnabled="{Binding HasLinks}">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="96"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <StackPanel Margin="0,0,6,0">
+                    <TextBlock Text="ArcGIS layer" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="ActiveArcGisLayerPicker" ItemsSource="{Binding ArcGisLayers}" IsEditable="True"
+                              Text="{Binding ActiveArcGisLayer, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                              ToolTip="ArcGIS layer for the selected link"
+                              AutomationProperties.Name="Selected link ArcGIS layer"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Margin="0,0,6,0">
+                    <TextBlock Text="Direction" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="ActiveDirectionPicker" ItemsSource="{Binding DirectionChoices}" DisplayMemberPath="Label" SelectedValuePath="Value"
+                              SelectedValue="{Binding ActiveDirection, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ToolTip="Whether this link can pull, push, or synchronize both ways"
+                              AutomationProperties.Name="Selected link synchronization direction"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="2">
+                    <TextBlock Text="Rhino layer" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="ActiveRhinoLayerPicker" ItemsSource="{Binding RhinoLayers}" IsEditable="True"
+                              Text="{Binding ActiveRhinoLayer, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                              ToolTip="Rhino layer for the selected link; blank uses the ArcGIS layer name"
+                              AutomationProperties.Name="Selected link Rhino layer"/>
+                  </StackPanel>
+                </Grid>
+              </Grid>
+
+              <TextBlock DockPanel.Dock="Top" Text="{Binding BulkSummary}" Style="{StaticResource Hint}" Margin="0,0,0,5"/>
+
+              <DataGrid x:Name="LinkGrid" ItemsSource="{Binding Links}" SelectedItem="{Binding ActiveLink, Mode=TwoWay}"
+                        AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                        IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow" MinHeight="90" MaxHeight="320" VerticalAlignment="Top"
+                        AutomationProperties.Name="Layer link table"
+                        AutomationProperties.HelpText="Select a row, then edit its ArcGIS layer, direction, and Rhino layer in the controls above."
+                        Style="{StaticResource CompactDataGrid}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        DockPanel.Dock="Top">
+                <DataGrid.Columns>
+                  <DataGridTextColumn Header="Layer pair" Binding="{Binding Title}" Width="*" MinWidth="150">
+                    <DataGridTextColumn.ElementStyle>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                        <Setter Property="ToolTip" Value="{Binding Title}"/>
+                      </Style>
+                    </DataGridTextColumn.ElementStyle>
+                  </DataGridTextColumn>
+                  <DataGridTextColumn Header="Profile" Binding="{Binding ProfileLabel}" Width="62" MinWidth="62"/>
+                  <DataGridTemplateColumn Header="Status" Width="96" MinWidth="96">
+                    <DataGridTemplateColumn.CellTemplate>
+                      <DataTemplate>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip="{Binding StatusText}">
+                          <TextBlock Text="{Binding StatusGlyph}" Foreground="{Binding StatusColor}" FontFamily="Segoe MDL2 Assets" FontSize="13"/>
+                          <TextBlock Text="{Binding StatusLabel}" Margin="4,0,0,0" FontSize="11"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+
+              <Expander Header="New ArcGIS layer from Rhino" IsExpanded="False" Margin="0,8,0,0" VerticalAlignment="Top"
+                        AutomationProperties.Name="New ArcGIS layer from Rhino">
+                <Border Padding="8" Margin="0,4,0,0" BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}" CornerRadius="3">
+                <StackPanel>
+                    <Grid Margin="0,0,0,6">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                      <TextBlock Text="Publish a Rhino layer as a new feature class in the project geodatabase, linked two-way." Style="{StaticResource Hint}" Margin="0" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                      <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="new-layer"
+                              Style="{StaticResource InfoButton}" ToolTip="Explain layer inference, creation, and identity tracking"
+                              AutomationProperties.Name="About creating an ArcGIS layer from Rhino"
+                              AutomationProperties.HelpText="Opens persistent guidance for creating and populating a new feature class."/>
+                    </Grid>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="58"/>
+                        <ColumnDefinition Width="*"/>
+                      </Grid.ColumnDefinitions>
+                      <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                      </Grid.RowDefinitions>
+                      <TextBlock Text="Rhino" Style="{StaticResource FieldLabel}" Margin="0,0,6,4" VerticalAlignment="Center"/>
+                      <ComboBox Grid.Column="1" ItemsSource="{Binding RhinoLayers}"
+                                SelectedItem="{Binding NewArcGisRhinoLayer, Mode=TwoWay}"
+                                IsEditable="True" Margin="0,0,0,4"
+                                ToolTip="Choose one Rhino layer; its supported geometry determines the ArcGIS shape type"
+                                AutomationProperties.Name="Rhino layer to publish"
+                                AutomationProperties.HelpText="Selects the Rhino layer whose objects will define and populate the new feature class."/>
+                      <TextBlock Grid.Row="1" Text="Name" Style="{StaticResource FieldLabel}" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                      <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding NewArcGisLayerName, UpdateSourceTrigger=PropertyChanged}"
+                               ToolTip="Feature class name; invalid characters are sanitized and duplicate names are made unique"
+                               AutomationProperties.Name="New ArcGIS feature class name"
+                               AutomationProperties.HelpText="Names the feature class created in the project's default geodatabase."/>
+                    </Grid>
+                    <TextBlock Text="{Binding NewLayerPlanSummary}" Style="{StaticResource Hint}" Margin="0,6,0,6" TextWrapping="Wrap"/>
+                    <Button Command="{Binding CreateArcGisLayerCommand}" Style="{StaticResource ActionButton}"
+                            HorizontalAlignment="Left"
+                            ToolTip="Create the inferred feature class, add a two-way link, and push matching Rhino objects"
+                            AutomationProperties.Name="Create ArcGIS layer and push Rhino objects"
+                            AutomationProperties.HelpText="Creates and populates a new feature class in the project's default geodatabase.">
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE710;" Style="{StaticResource ActionGlyph}"/>
+                        <TextBlock Text="Create and push" Style="{StaticResource ActionLabel}"/>
+                      </StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding NewLayerSummary}" Style="{StaticResource Hint}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+              </Expander>
+            </DockPanel>
+
+          </Grid>
+        </DockPanel>
+      </TabItem>
+
+      <!-- ============================ Settings ============================ -->
+      <TabItem Header="Settings" Style="{StaticResource ProTabItem}" AutomationProperties.Name="Synchronization settings">
+        <ScrollViewer Style="{StaticResource TabPage}">
+          <StackPanel>
+
+            <Grid Margin="0,4,0,4">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Text="Earth anchor" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="earth-anchor"
+                      Style="{StaticResource InfoButton}" ToolTip="Explain the shared coordinate frame"
+                      AutomationProperties.Name="About the earth anchor"
+                      AutomationProperties.HelpText="Opens persistent guidance about coordinate mapping and model base values."/>
+            </Grid>
+            <TextBlock Text="Ties a real-world location to a point in the Rhino model. Everything pulled is placed relative to it, and everything pushed is located from it. If none is set when you first pull, one is placed at the centre of the current map view."
+                       Style="{StaticResource Hint}"/>
+            <Border Padding="8" BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}" CornerRadius="3" Margin="0,0,0,10">
+              <TextBlock Text="{Binding AnchorStatus}" TextWrapping="Wrap"/>
+            </Border>
+            <TextBlock Text="Model base point" Style="{StaticResource FieldLabel}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+              <TextBlock Text="X" VerticalAlignment="Center" Opacity="0.75"/>
+              <TextBox Text="{Binding ModelBaseX, UpdateSourceTrigger=PropertyChanged}" Width="80" Margin="6,0,0,0" ToolTip="Model X the location maps to. 0 = Rhino origin."/>
+              <TextBlock Text="Y" VerticalAlignment="Center" Opacity="0.75" Margin="12,0,0,0"/>
+              <TextBox Text="{Binding ModelBaseY, UpdateSourceTrigger=PropertyChanged}" Width="80" Margin="6,0,0,0" ToolTip="Model Y the location maps to. 0 = Rhino origin."/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="Set from map centre" Command="{Binding SetAnchorFromMapCommand}" Style="{StaticResource ActionButton}"
+                      ToolTip="Map the current ArcGIS view centre to the Rhino model base point"
+                      AutomationProperties.Name="Set anchor from map centre" AutomationProperties.HelpText="Sets the shared coordinate reference from the current map centre."/>
+              <Button Content="Clear" Command="{Binding ClearAnchorCommand}" Style="{StaticResource ActionButton}" Margin="8,0,0,0"
+                      ToolTip="Remove the saved coordinate anchor; use only when resetting georeferencing"
+                      AutomationProperties.Name="Clear earth anchor" AutomationProperties.HelpText="Clears the saved coordinate mapping without moving existing geometry."/>
+            </StackPanel>
+
+            <Grid Margin="0,10,0,3">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Text="Attributes" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="attributes"
+                      Style="{StaticResource InfoButton}" ToolTip="Explain attribute ownership and editable fields"
+                      AutomationProperties.Name="About attribute editing"
+                      AutomationProperties.HelpText="Opens persistent guidance about ArcGIS-owned and shared attributes."/>
+            </Grid>
+            <CheckBox Content="Let Rhino edit attributes"
+                      IsChecked="{Binding AttributesEditableInRhino, Mode=TwoWay}"
+                      ToolTip="Off: attributes come in read-only and ArcGIS stays authoritative. On: design fields become shared, so attributes authored in Rhino push back, and a change on both sides is raised as a conflict. Identity and Shape_* fields stay ArcGIS-owned either way."/>
+            <TextBlock Text="Off keeps every field ArcGIS-owned and read-only in Rhino. On makes design fields shared; identity and Shape_* fields stay ArcGIS-owned."
+                       Style="{StaticResource Hint}" Margin="22,2,0,0"/>
+
+            <Grid Margin="0,10,0,3">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Text="Conflicts" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              <Button Grid.Column="1" Command="{Binding ShowHelpCommand}" CommandParameter="conflicts"
+                      Style="{StaticResource InfoButton}" ToolTip="Explain Manual and preferred-side conflict policies"
+                      AutomationProperties.Name="About conflict policy"
+                      AutomationProperties.HelpText="Opens persistent guidance about what Apply does when both sides changed."/>
+            </Grid>
+            <TextBlock Text="What Apply does when both sides changed the same thing. Manual holds it for you to look at."
+                       Style="{StaticResource Hint}"/>
+            <ComboBox ItemsSource="{Binding ConflictPolicies}" SelectedItem="{Binding ConflictPolicy, Mode=TwoWay}" HorizontalAlignment="Left" MinWidth="140"
+                      ToolTip="Manual holds conflicts; a preferred side overwrites the other side during Apply"
+                      AutomationProperties.Name="Conflict resolution policy"
+                      AutomationProperties.HelpText="Choose what Apply does when Rhino and ArcGIS both changed since the last baseline."/>
+
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Guide" Style="{StaticResource ProTabItem}" AutomationProperties.Name="Synchronization guide">
+        <ScrollViewer Style="{StaticResource TabPage}">
+          <StackPanel>
+
+            <TextBlock Text="How a sync works" Style="{StaticResource FirstSectionHeader}"/>
+            <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap">
+              <Run Text="Pull brings ArcGIS features into Rhino as new objects. Preview compares what Rhino and ArcGIS each hold right now against the last synced baseline, without writing anything, and reports each object as Clean, New/Modified in Rhino, New/Modified/Deleted in ArcGIS, or Modified in Both (a conflict). Apply carries out what Preview reported: it creates or updates ArcGIS features from Rhino-side changes, creates new Rhino objects for new ArcGIS features, and re-baselines everything it touched so the next Preview is clean."/>
+            </TextBlock>
+            <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap">
+              <Run Text="A supported geometry edit made in ArcGIS is reported as Modified in ArcGIS. Apply replaces the matching tracked Rhino object's geometry in place while preserving its Rhino identity and attributes. Locked Rhino objects, failed conversions, and unsupported shapes are held and reported instead of being silently changed. New ArcGIS features arrive as new tracked Rhino objects."/>
+            </TextBlock>
+
+            <TextBlock Text="Rhino geometry to ArcGIS shape type" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Text="What a Rhino object becomes on push depends on the target layer's own shape type, not just the object's kind -- pushing a closed curve into a polyline layer, for instance, uses it as a line, not a polygon."
+                       Style="{StaticResource Hint}"/>
+            <Border Padding="8" BorderThickness="1" BorderBrush="{DynamicResource Esri_BorderBrush}" CornerRadius="3" Margin="0,0,0,10">
+              <StackPanel>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Point" FontWeight="SemiBold"/><Run Text=" -&gt; Point"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Open curve" FontWeight="SemiBold"/><Run Text=" -&gt; Polyline"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Closed planar curve" FontWeight="SemiBold"/><Run Text=" -&gt; Polygon (or Polyline, if the layer wants a line)"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Closed non-planar curve" FontWeight="SemiBold"/><Run Text=" -&gt; Polyline; a polygon target needs it projected flat first"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Planar surface" FontWeight="SemiBold"/><Run Text=" -&gt; Polygon"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Extrusion" FontWeight="SemiBold"/><Run Text=" -&gt; Polygon with a height, or Multipatch"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Mesh / closed Brep" FontWeight="SemiBold"/><Run Text=" -&gt; Multipatch"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Open Brep" FontWeight="SemiBold"/><Run Text=" -&gt; Multipatch, but it will not be watertight"/></TextBlock>
+                <TextBlock Style="{StaticResource FieldValue}" TextWrapping="Wrap"><Run Text="Block instance" FontWeight="SemiBold"/><Run Text=" -&gt; a point carrying the block name; not exploded to multipatch"/></TextBlock>
+              </StackPanel>
+            </Border>
+
+            <TextBlock Text="What does not push yet" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap">
+              <Run Text="SubD objects, hatch patterns (only a hatch's boundary curve counts, and only if it is drawn as a curve), and anything else RhinoGeometryReader does not recognise are skipped on push and reported, rather than sent as an empty feature. Convert a SubD to a mesh (or a Brep) before pushing it."/>
+            </TextBlock>
+            <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap">
+              <Run Text="Create and push inspects the converted Rhino geometry before it creates the feature class. Points create Point, open curves create Polyline, planar regions create Polygon, and meshes plus three-dimensional Breps, surfaces, and extrusions create a Z-aware Multipatch feature class. If a layer mixes shape families, the majority supported family sets the target and objects that do not match are skipped and reported."/>
+            </TextBlock>
+
+            <TextBlock Text="Multipatch specifics" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap">
+              <Run Text="A pushed mesh is triangulated and coincident coordinates are welded into shared topology on ArcGIS readback. Quads split along one diagonal, and normals, UVs, materials, and other rendering data are not preserved, so the result is geometric rather than presentation-faithful. A newly added Multipatch layer defaults to &quot;On the ground&quot; elevation in a scene, so the mesh's own Z=0 sits at the terrain surface rather than at an absolute elevation datum -- change it in the layer's Elevation properties if you want the raw Z values instead."/>
+            </TextBlock>
+
+            <TextBlock Text="Author a link profile" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Style="{StaticResource Hint}" TextWrapping="Wrap">
+              <Run Text="Open Sync, choose the active pair, then open Profile. Check only the ArcGIS fields the workflow needs, give each one the Rhino user-text key it maps to, and choose its owner. Shared fields may change on either side and become a conflict if both sides edit them; Rhino-owned fields push out; ArcGIS-owned fields pull in; local-only fields stay on their named side. ArcGIS identity and Shape_* fields are locked automatically. Optional units and semicolon-separated validators travel with the profile. Save profile before Preview or Apply; Restore defaults removes the custom rules and rebuilds the safe ArcGIS-owned mapping from the live schema."/>
+            </TextBlock>
+
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+    </TabControl>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!--
+      netstandard2.0 so the same compiled core is shared by the Rhino 8 / .NET build
+      and its adapters while remaining independent of either desktop SDK.
+      This project deliberately has NO dependency on the ArcGIS Pro SDK or RhinoCommon:
+      all SDK-specific work lives in the adapters. Keeping it pure makes it unit-testable
+      without ArcGIS Pro or Rhino running.
+    -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <RootNamespace>RhinoArcGIS.Core</RootNamespace>
+    <AssemblyName>RhinoArcGIS.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+</Project>
