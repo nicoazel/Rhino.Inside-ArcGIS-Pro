@@ -6,7 +6,7 @@ The static site in `site/` contains the overview, installation instructions, use
 information. Build it with Node.js 22 or later:
 
 ```powershell
-$env:SITE_REPOSITORY = 'nicoazel/Rhino.Inside-ArcGIS-Public'
+$env:SITE_REPOSITORY = 'nicoazel/RhinoInside-ArcGIS-Pro'
 node site/build.mjs
 python -m http.server 8765 --bind 127.0.0.1 --directory site/dist
 ```
