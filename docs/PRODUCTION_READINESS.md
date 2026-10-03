@@ -35,6 +35,9 @@ defines their requirements. Historical logs and scratch projects are retained pr
 - Simple planar FirstRing multipatch faces support concavity. Multi-ring groups, including holes,
   are rejected; tessellate them to triangle patches in ArcGIS before exchange.
 - Empty or unsupported Rhino layers cannot infer a new GIS feature-class type.
+- Switching projects during new-layer creation stops the initial push. If schema creation already
+  completed, return to the original project to review or remove its empty feature class; automatic
+  cleanup does not target a closed project or delete from the replacement project's geodatabase.
 - Detected deletions are held; they are not automatically mirrored.
 - Manual conflict policy holds conflicts. Per-object decisions are not available in this release.
 - Heights pass through unchanged; vertical datums (NAVD88, ellipsoidal heights) are not transformed.
