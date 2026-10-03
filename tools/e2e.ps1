@@ -1306,6 +1306,21 @@ try {
         ("stored={0} table={1}: {2}" -f @($back.stored).Count, @($back.table).Count, ((@($back.table) | ForEach-Object { "$($_.arcgisLayer)/$($_.direction)" }) -join ', ')) | Out-Null
     $trackedBack = @((Send-Bridge trackedlayers).layers)
     Check 'reopened document still tracks its layers' ($trackedBack.Count -ge 1) ("tracked layers: " + (($trackedBack | ForEach-Object { $_.Layer }) -join ', ')) | Out-Null
+
+    $queuedLink = @($back.table)[0]
+    $gisBeforeQueue = Send-Bridge features @{ arcgisLayer = $queuedLink.arcgisLayer; take = 100 } -TimeoutSec 600
+    $queued = Send-Bridge queuedapplydocumentswitch @{
+        arcgisLayer = $queuedLink.arcgisLayer; rhinoLayer = $queuedLink.rhinoLayer
+        expectedSource = $queuedLink.source; direction = $queuedLink.direction
+    } -TimeoutSec 600
+    Check 'queued ordinary Apply rejects a document switch before starting' `
+        ($queued.rejected -and $queued.error -match 'document changed') $queued.error | Out-Null
+    $gisAfterQueue = Send-Bridge features @{ arcgisLayer = $queuedLink.arcgisLayer; take = 100 } -TimeoutSec 600
+    Check 'rejected queued Apply writes neither the new Rhino document nor GIS' `
+        ($queued.document.ObjectCount -eq 0 -and -not $queued.busy -and
+         ($gisBeforeQueue | ConvertTo-Json -Depth 20 -Compress) -eq ($gisAfterQueue | ConvertTo-Json -Depth 20 -Compress)) `
+        ("new document objects={0}; busy={1}; GIS features={2}" -f $queued.document.ObjectCount, $queued.busy, $gisAfterQueue.total) | Out-Null
+    Send-Bridge opendoc @{ path = $doc } -TimeoutSec 600 | Out-Null
 }
 catch {
     Check 'persistence ran without a bridge error' $false $_.Exception.Message | Out-Null

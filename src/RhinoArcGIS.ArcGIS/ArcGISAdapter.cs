@@ -175,6 +175,7 @@ namespace RhinoArcGIS.ArcGIS
                 var featureClass = new FeatureClassDescription(name, fieldDescriptions, shape);
                 var schema = new SchemaBuilder(geodatabase);
                 schema.Create(featureClass);
+                ValidateWriteContext?.Invoke();
                 if (!schema.Build())
                     throw new InvalidOperationException("Feature class creation failed: " +
                                                         string.Join("; ", schema.ErrorMessages));

@@ -213,10 +213,11 @@ namespace RhinoInside.ArcGISPro
         internal static Task<SyncReport> ApplyAsync(string arcgisLayer, string rhinoLayer, ConflictResolution conflicts,
                                                     SyncDirectionMode direction = SyncDirectionMode.TwoWay,
                                                     string profileJson = null,
-                                                    string expectedArcGisSource = null) =>
+                                                    string expectedArcGisSource = null,
+                                                    uint expectedDocumentSerial = 0) =>
             RunAsync(arcgisLayer, rhinoLayer,
                 new SyncOptions { Apply = true, Conflicts = conflicts, Direction = direction }, profileJson,
-                expectedArcGisSource);
+                expectedArcGisSource, expectedDocumentSerial: expectedDocumentSerial);
 
         /// <summary>Freshly previews, presents that report for explicit local review, then applies while holding the run gate.</summary>
         internal static Task<SyncReport> ReviewAndApplyAsync(string arcgisLayer, string rhinoLayer,
@@ -226,10 +227,11 @@ namespace RhinoInside.ArcGISPro
         {
             if (review == null) throw new ArgumentNullException(nameof(review));
             Initialize();
+            var documentSerial = CaptureDocument();
             return RunGatedAsync(() => Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var documentSerial = OnUi(() => { validateContext?.Invoke(); return RhinoHost.GetActiveDocumentSerial(); });
+                OnUi(() => { RequireDocument(documentSerial); validateContext?.Invoke(); return true; });
                 var rhino = string.IsNullOrWhiteSpace(rhinoLayer) ? arcgisLayer : rhinoLayer;
                 var beforePreview = CaptureReviewStamp(arcgisLayer, rhino, expectedArcGisSource);
                 var preview = RunCore(arcgisLayer, rhino,
@@ -267,10 +269,11 @@ namespace RhinoInside.ArcGISPro
             if (review == null) throw new ArgumentNullException(nameof(review));
             if (validateContext == null) throw new ArgumentNullException(nameof(validateContext));
             Initialize();
+            var documentSerial = CaptureDocument();
             return RunGatedAsync(() => Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var documentSerial = OnUi(() => { validateContext(); return RhinoHost.GetActiveDocumentSerial(); });
+                OnUi(() => { RequireDocument(documentSerial); validateContext(); return true; });
                 if (!OnUi(review))
                     throw new InvalidOperationException("Local review denied or cancelled; nothing was pulled.");
                 cancellationToken.ThrowIfCancellationRequested();
@@ -288,10 +291,11 @@ namespace RhinoInside.ArcGISPro
                                                                  CancellationToken cancellationToken = default)
         {
             Initialize();
+            expectedDocumentSerial = CaptureDocument(expectedDocumentSerial);
             return RunGatedAsync(() => Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                OnUi(() => { validateContext?.Invoke(); return true; });
+                OnUi(() => { RequireDocument(expectedDocumentSerial); validateContext?.Invoke(); return true; });
                 return GetProfileDraft(arcgisLayer, rhinoLayer, profileJson, expectedArcGisSource, expectedDocumentSerial);
             }), cancellationToken);
         }
@@ -301,10 +305,13 @@ namespace RhinoInside.ArcGISPro
         /// creation is a separate step so the pane can establish the persisted link before its
         /// first ordinary <see cref="SyncService"/> apply writes objects and identities.
         /// </summary>
-        internal static Task<NewLayerCreation> CreateLayerFromRhinoAsync(string rhinoLayer, string requestedName)
+        internal static Task<NewLayerCreation> CreateLayerFromRhinoAsync(string rhinoLayer, string requestedName,
+            uint expectedDocumentSerial = 0)
         {
             Initialize();
-            return RunGatedAsync(() => Task.Run(() => CreateLayerFromRhino(rhinoLayer, requestedName)));
+            var documentSerial = CaptureDocument(expectedDocumentSerial);
+            var project = ArcGIS.Desktop.Core.Project.Current;
+            return RunGatedAsync(() => Task.Run(() => CreateLayerFromRhino(rhinoLayer, requestedName, documentSerial, project)));
         }
 
         /// <summary>Read-only schema inference for the pane's before-creation summary.</summary>
@@ -315,10 +322,19 @@ namespace RhinoInside.ArcGISPro
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static NewLayerCreation CreateLayerFromRhino(string rhinoLayer, string requestedName)
+        static NewLayerCreation CreateLayerFromRhino(string rhinoLayer, string requestedName,
+            uint documentSerial, ArcGIS.Desktop.Core.Project project)
         {
-            EnsureEarthAnchor();
-            var plan = PlanLayerFromConvertedRhinoCore(rhinoLayer, requestedName);
+            Action validateContext = () => OnUi(() =>
+            {
+                RequireDocument(documentSerial);
+                if (ArcGIS.Desktop.Core.Project.Current != project)
+                    throw new InvalidOperationException("The ArcGIS project changed before layer creation; nothing was created.");
+                return true;
+            });
+            validateContext();
+            EnsureEarthAnchor(documentSerial);
+            var plan = PlanLayerFromConvertedRhinoCore(rhinoLayer, requestedName, documentSerial);
             if (plan.Target == RhinoArcGIS.Core.Geometry.GeometryTarget.Unsupported || plan.MatchingCount == 0)
                 throw new InvalidOperationException(
                     $"Rhino layer '{rhinoLayer}' has no point, curve, planar polygon, mesh, or Brep geometry to publish.");
@@ -330,7 +346,6 @@ namespace RhinoInside.ArcGISPro
             // ArcGIS refuses schema changes while edits are pending -- and the previous layer
             // created here leaves its initial push pending -- so a second "create" in a row failed
             // with "cannot be invoked ... when editing is in progress". Save first, with consent.
-            var project = ArcGIS.Desktop.Core.Project.Current;
             if (project != null && project.HasEdits)
             {
                 var consent = RhinoHost.UnsavedWork != RhinoHost.UnsavedWorkPolicy.Prompt ||
@@ -341,11 +356,12 @@ namespace RhinoInside.ArcGISPro
                         System.Windows.MessageBoxImage.Question) == System.Windows.MessageBoxResult.Yes);
                 if (!consent)
                     throw new InvalidOperationException("Creating the layer was cancelled: save or discard ArcGIS edits first.");
+                validateContext();
                 if (!project.SaveEditsAsync().GetAwaiter().GetResult())
                     throw new InvalidOperationException("ArcGIS could not save its pending edits, so the new layer was not created.");
             }
 
-            var arcgis = new RhinoArcGIS.ArcGIS.ArcGISAdapter();
+            var arcgis = new RhinoArcGIS.ArcGIS.ArcGISAdapter { ValidateWriteContext = validateContext };
             var layerName = arcgis.CreateFeatureClass(geodatabase, plan.Name, plan.Target, plan.Fields);
             return new NewLayerCreation(layerName, geodatabase, plan);
         }
@@ -365,14 +381,14 @@ namespace RhinoInside.ArcGISPro
                 string.IsNullOrWhiteSpace(requestedName) ? rhinoLayer : requestedName);
         }
 
-        static NewLayerPlan PlanLayerFromConvertedRhinoCore(string rhinoLayer, string requestedName)
+        static NewLayerPlan PlanLayerFromConvertedRhinoCore(string rhinoLayer, string requestedName, uint documentSerial)
         {
             if (!RhinoHost.IsStarted)
                 throw new InvalidOperationException("Start Rhino before creating an ArcGIS layer.");
             if (string.IsNullOrWhiteSpace(rhinoLayer))
                 throw new ArgumentException("Choose a Rhino layer first.", nameof(rhinoLayer));
 
-            var rhino = new UiThreadRhinoAdapter(new RhinoArcGIS.Rhino.RhinoAdapter(), _uiDispatcher, RhinoHost.GetActiveDocumentSerial);
+            var rhino = new UiThreadRhinoAdapter(new RhinoArcGIS.Rhino.RhinoAdapter(), _uiDispatcher, RhinoHost.GetActiveDocumentSerial, documentSerial);
             var objects = rhino.ReadObjects(rhinoLayer);
             return NewLayerInference.Plan(objects,
                 string.IsNullOrWhiteSpace(requestedName) ? rhinoLayer : requestedName);
@@ -388,10 +404,11 @@ namespace RhinoInside.ArcGISPro
                                          CancellationToken cancellationToken = default)
         {
             Initialize();
+            expectedDocumentSerial = CaptureDocument(expectedDocumentSerial);
             return RunGatedAsync(() => Task.Run(() =>
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                OnUi(() => { validateContext?.Invoke(); return true; });
+                OnUi(() => { RequireDocument(expectedDocumentSerial); validateContext?.Invoke(); return true; });
                 return Run(arcgisLayer, rhinoLayer, options, profileJson, expectedArcGisSource, expectedDocumentSerial);
             }), cancellationToken);
         }
@@ -421,7 +438,14 @@ namespace RhinoInside.ArcGISPro
         /// origin. Neither pull nor sync sets an anchor of its own, so one is established here, at
         /// the centre of the current map view, the first time it is needed.
         /// </remarks>
-        static void RequireDocument(uint documentSerial)
+        static uint CaptureDocument(uint expectedDocumentSerial = 0) => OnUi(() =>
+        {
+            var serial = expectedDocumentSerial != 0 ? expectedDocumentSerial : RhinoHost.GetActiveDocumentSerial();
+            RequireDocument(serial);
+            return serial;
+        });
+
+        internal static void RequireDocument(uint documentSerial)
         {
             if (documentSerial == 0 || RhinoHost.GetActiveDocumentSerial() != documentSerial)
                 throw new InvalidOperationException("The active Rhino document changed during synchronization; return to the original document and preview again.");
@@ -696,8 +720,12 @@ namespace RhinoInside.ArcGISPro
                 throw new ArgumentException("Choose an ArcGIS layer first.", nameof(arcgisLayer));
 
             var rhinoLayerName = string.IsNullOrWhiteSpace(rhinoLayer) ? arcgisLayer : rhinoLayer;
+            var documentSerial = CaptureDocument();
             return RunGatedAsync(() => Task.Run(() =>
-                PullCore(arcgisLayer, rhinoLayerName, selectedOnly, profileJson, expectedArcGisSource)));
+            {
+                OnUi(() => { RequireDocument(documentSerial); return true; });
+                return PullCore(arcgisLayer, rhinoLayerName, selectedOnly, profileJson, expectedArcGisSource, documentSerial);
+            }));
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]

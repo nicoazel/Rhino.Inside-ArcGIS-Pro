@@ -693,6 +693,8 @@ namespace RhinoInside.ArcGISPro
         internal async Task<NewLayerPushResult> NewArcGisLayerAsync(string rhinoLayer, string requestedName,
             LinkedObjectsChoice linked = LinkedObjectsChoice.Ask)
         {
+            var documentSerial = RhinoHost.GetActiveDocumentSerial();
+            var requestedProject = ArcGIS.Desktop.Core.Project.Current;
             IsBusy = true;
             NewLayerSummary = $"Inspecting '{rhinoLayer}' and creating its ArcGIS schema…";
             string createdLayer = null;
@@ -726,6 +728,7 @@ namespace RhinoInside.ArcGISPro
                         linked = answer == System.Windows.MessageBoxResult.Yes ? LinkedObjectsChoice.Copy : LinkedObjectsChoice.Move;
                     }
 
+                    SyncCoordinator.RequireDocument(documentSerial);
                     if (linked == LinkedObjectsChoice.Copy)
                     {
                         var copied = RhinoHost.CopyLayerUnlinked(rhinoLayer, copyLayer);
@@ -742,9 +745,12 @@ namespace RhinoInside.ArcGISPro
                     RefreshRhinoLayers();
                 }
 
-                var creation = await SyncCoordinator.CreateLayerFromRhinoAsync(rhinoLayer, requestedName);
+                var creation = await SyncCoordinator.CreateLayerFromRhinoAsync(rhinoLayer, requestedName, documentSerial);
                 createdLayer = creation.LayerName;
                 await RefreshArcGisLayersAsync();
+                SyncCoordinator.RequireDocument(documentSerial);
+                if (ArcGIS.Desktop.Core.Project.Current != requestedProject)
+                    throw new InvalidOperationException("The ArcGIS project changed while creating the layer; return to the original project to review it.");
 
                 var link = SetLink(createdLayer, rhinoLayer, RhinoArcGIS.Core.Sync.SyncDirectionMode.TwoWay);
                 link.ArcGisSource = _layerSources.FirstOrDefault(l =>
@@ -760,12 +766,13 @@ namespace RhinoInside.ArcGISPro
                     SyncCoordinator.AttributesEditableInRhino = true;
                     var profileDraft = await SyncCoordinator.GetProfileDraftAsync(
                         createdLayer, rhinoLayer, profileJson: null,
-                        expectedArcGisSource: link.ArcGisSource);
+                        expectedArcGisSource: link.ArcGisSource, expectedDocumentSerial: documentSerial);
+                    SyncCoordinator.RequireDocument(documentSerial);
                     link.ProfileJson = RhinoArcGIS.Core.Profiles.ProfileJson.Serialize(profileDraft.Profile);
                     report = await SyncCoordinator.ApplyAsync(
                         createdLayer, rhinoLayer, RhinoArcGIS.Core.Sync.ConflictResolution.Manual,
                         RhinoArcGIS.Core.Sync.SyncDirectionMode.TwoWay, link.ProfileJson,
-                        link.ArcGisSource);
+                        link.ArcGisSource, documentSerial);
                 }
                 finally
                 {
@@ -773,6 +780,7 @@ namespace RhinoInside.ArcGISPro
                     NotifyPropertyChanged(() => AttributesEditableInRhino);
                 }
 
+                SyncCoordinator.RequireDocument(documentSerial);
                 var rows = report.Entries.Select(SyncRow.From).ToList();
                 link.LastResult = DescribeRun(true, rows);
                 link.LastRows = rows;
@@ -795,9 +803,9 @@ namespace RhinoInside.ArcGISPro
             }
             catch (Exception original)
             {
-                if (!string.IsNullOrWhiteSpace(createdLayer))
+                if (!string.IsNullOrWhiteSpace(createdLayer) && ArcGIS.Desktop.Core.Project.Current == requestedProject)
                 {
-                    RemoveLink(createdLayer);
+                    if (RhinoHost.GetActiveDocumentSerial() == documentSerial) RemoveLink(createdLayer);
                     try
                     {
                         await Task.Run(() =>
@@ -822,21 +830,25 @@ namespace RhinoInside.ArcGISPro
         /// <summary>Runs every row in the table in turn, and writes each row's one-line result.</summary>
         internal async Task RunAllAsync(bool apply)
         {
+            var documentSerial = RhinoHost.GetActiveDocumentSerial();
+            var requestedLinks = Links.ToList();
             IsBusy = true;
             BulkSummary = apply ? "Applying all complete links…" : "Previewing all complete links…";
             try
             {
                 int completed = 0, needsAttention = 0, clean = 0, failed = 0;
-                foreach (var link in Links)
+                foreach (var link in requestedLinks)
                 {
+                    SyncCoordinator.RequireDocument(documentSerial);
                     if (!link.IsComplete) continue;
                     try
                     {
                         var report = apply
                             ? await SyncCoordinator.ApplyAsync(link.ArcGisLayer, link.EffectiveRhinoLayer,
-                                ConflictPolicy, link.Direction, link.ProfileJson, link.ArcGisSource)
+                                ConflictPolicy, link.Direction, link.ProfileJson, link.ArcGisSource, documentSerial)
                             : await SyncCoordinator.PreviewAsync(link.ArcGisLayer, link.EffectiveRhinoLayer,
-                                link.Direction, link.ProfileJson, link.ArcGisSource);
+                                link.Direction, link.ProfileJson, link.ArcGisSource, expectedDocumentSerial: documentSerial);
+                        SyncCoordinator.RequireDocument(documentSerial);
                         var rows = report.Entries.Select(SyncRow.From).ToList();
                         link.LastResult = DescribeRun(apply, rows);
                         link.LastRows = rows;
@@ -860,6 +872,11 @@ namespace RhinoInside.ArcGISPro
                     : ActiveLink.LastResult == null ? "No preview run for this pair yet."
                     : $"Selected pair — {ActiveLink.LastResult}.";
                 Refresh();
+            }
+            catch (Exception ex)
+            {
+                BulkSummary = "Bulk synchronization stopped: " + ex.Message;
+                SyncSummary = BulkSummary;
             }
             finally { IsBusy = false; }
         }
@@ -1555,6 +1572,8 @@ namespace RhinoInside.ArcGISPro
         /// </summary>
         async Task RunSyncAsync(bool apply)
         {
+            var documentSerial = RhinoHost.GetActiveDocumentSerial();
+            var requestedLink = ActiveLink;
             IsBusy = true;
             SyncSummary = apply ? "Applying…" : "Computing the plan…";
 
@@ -1564,16 +1583,18 @@ namespace RhinoInside.ArcGISPro
                 // half back. Blocking here is what hung Pro when applying after a Rhino edit.
                 var report = apply
                     ? await SyncCoordinator.ApplyAsync(SelectedArcGisLayer, SelectedRhinoLayer,
-                        ConflictPolicy, ActiveDirection, ActiveLink?.ProfileJson, ActiveLink?.ArcGisSource)
+                        ConflictPolicy, ActiveDirection, requestedLink?.ProfileJson, requestedLink?.ArcGisSource, documentSerial)
                     : await SyncCoordinator.PreviewAsync(SelectedArcGisLayer, SelectedRhinoLayer,
-                        ActiveDirection, ActiveLink?.ProfileJson, ActiveLink?.ArcGisSource);
+                        ActiveDirection, requestedLink?.ProfileJson, requestedLink?.ArcGisSource, expectedDocumentSerial: documentSerial);
+
+                SyncCoordinator.RequireDocument(documentSerial);
 
                 var rows = report.Entries.Select(SyncRow.From).ToList();
                 SetRows(rows);
-                if (ActiveLink != null)
+                if (requestedLink != null)
                 {
-                    ActiveLink.LastResult = DescribeRun(apply, rows);
-                    ActiveLink.LastRows = rows;
+                    requestedLink.LastResult = DescribeRun(apply, rows);
+                    requestedLink.LastRows = rows;
                 }
 
                 SyncSummary = apply

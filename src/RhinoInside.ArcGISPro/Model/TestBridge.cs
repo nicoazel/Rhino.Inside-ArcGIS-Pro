@@ -260,6 +260,30 @@ namespace RhinoInside.ArcGISPro
                 case "newdoc":
                     return OnUi(() => { RhinoHost.NewDocument(); return Describe(RhinoHost.GetActiveDocument()); });
 
+                case "queuedapplydocumentswitch":
+                {
+                    // Hold the real gate while an ordinary pane-style Apply queues, then switch
+                    // documents before releasing it. The queued request must refuse the new doc.
+                    var queued = SyncCoordinator.RunHostActionAsync(() =>
+                    {
+                        var task = SyncCoordinator.ApplyAsync(ArcGisLayer(), RhinoLayer(),
+                            RhinoArcGIS.Core.Sync.ConflictResolution.Manual, Direction(),
+                            (string)request["profileJson"], (string)request["expectedSource"]);
+                        RhinoHost.NewDocument();
+                        return task;
+                    }).GetAwaiter().GetResult();
+                    string error = null;
+                    try { queued.GetAwaiter().GetResult(); }
+                    catch (InvalidOperationException ex) { error = ex.Message; }
+                    return OnUi(() => new
+                    {
+                        rejected = error != null,
+                        error,
+                        document = Describe(RhinoHost.GetActiveDocument()),
+                        busy = SyncCoordinator.IsBusy
+                    });
+                }
+
                 case "setunits":
                     return OnUi(() => { RhinoHost.SetModelUnits((string)request["units"]); return Describe(RhinoHost.GetActiveDocument()); });
 
