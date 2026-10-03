@@ -2,7 +2,7 @@
 
 This source candidate includes an optional stdio MCP gateway for the Rhino document hosted inside ArcGIS Pro. It complements the separately installed [ArcGISPro.MCP](https://github.com/nicoazel/ArcGISPro.MCP) gateway, which controls maps, layers, layouts and geoprocessing. Configure both servers in the MCP client and select the same ArcGIS Pro PID. The Rhino operations are exposed by this gateway, not registered in the companion's operation catalog.
 
-**Validation status:** protocol and portable contracts can run without ArcGIS. Embedded-host coexistence, local review dialogs, document lifecycle and package installation still require the deferred live acceptance. This candidate is not a certified public installer.
+**Validation status:** RC1 passed isolated live control checks with actual local approval/denial dialogs and a fresh-process reopen. RC2 adds document/link revalidation and cancellable gate waits. Exact package installation, companion coexistence and the full visual matrix remain acceptance gates. This candidate is not a certified public installer.
 
 ## Setup
 
@@ -35,13 +35,20 @@ Configure the companion gateway separately using its documentation and `ARCGIS_P
 | `rhino_profile` | Current schema and reconciled profile for one saved link. |
 | `rhino_preview` | Read-only sync report; requires initialized georeferencing. |
 | `rhino_launch` | Launch embedded Rhino after a local confirmation. |
-| `rhino_pull` | Pull into the saved Rhino layer after local confirmation; can initialize georeferencing. |
+| `rhino_pull` | Review and pull under the shared gate; rechecks the bound document and saved link before writes. |
 | `rhino_apply` | Fresh preview and local review followed by Apply under the shared synchronization gate. |
 | `rhino_save` | Save the current Rhino document after local confirmation. |
 
 Link operations require `arcgisLayer`, `rhinoLayer` and `expectedSource` exactly as returned by `rhino_links`. Missing/ambiguous links and changed sources fail before writes. A same-label layer never replaces a saved source automatically; remove and recreate the link after making the intended layer unique in the candidate maps. Repairs and new link/profile authoring are performed in the dockpane. `rhino_apply` accepts `Manual` (default), `PreferRhino` or `PreferArcGis` conflict policy. Its local review shows the target, source, direction, policy and fresh report. Denial/cancellation returns a tool error and does not apply. A result includes full outcome counts and up to 100 report rows, with an explicit truncation flag.
 
 There is no arbitrary-script, deletion, unsaved-work-discard or remote approval tool. Approval cannot be granted through the MCP client. Preview of an uninitialized document fails with an actionable message rather than changing document metadata; first initialize through a locally approved Pull.
+
+Pull and Apply bind the request to its Rhino document and saved link settings. Changing the document,
+profile or direction while queued or during review rejects the mutation. Each UI batch also checks
+the bound document, so a document switch cannot redirect later chunks into a different file.
+Bridge shutdown cancels queued mutation waits and is checked again after review, before writes.
+An operation that already started writing retains the gate until it finishes; cancellation does
+not roll back those writes.
 
 Client cancellation cannot undo a dispatched host operation. Requests are processed sequentially; a transport disconnect or timeout does not prove a mutation failed. Inspect state before retrying. Keep other clients from editing the same linked data during review/apply. Coexistence with the companion, edits made outside the shared coordinator and shutdown during control are deferred host acceptance cases.
 

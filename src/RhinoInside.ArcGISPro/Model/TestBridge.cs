@@ -314,6 +314,13 @@ namespace RhinoInside.ArcGISPro
                 case "setdefaultgdb":
                     return SetDefaultGeodatabase((string)request["path"]);
 
+                case "openproject":
+                    return new
+                    {
+                        opened = OnUi(() => ArcGIS.Desktop.Core.Project.OpenAsync((string)request["path"]))
+                            .GetAwaiter().GetResult()
+                    };
+
                 case "saveproject":
                     return new
                     {

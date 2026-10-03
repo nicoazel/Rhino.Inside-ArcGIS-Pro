@@ -105,8 +105,9 @@ namespace RhinoArcGIS.ArcGIS
         /// Expands every patch back into indexed faces, then welds coincident patch coordinates so
         /// a mesh round-tripped through a multipatch feature class has shared Rhino vertices rather
         /// than carrying ArcGIS's per-patch coordinate storage through as triangle soup.
-        /// Ring/FirstRing patches are fan-triangulated from the boundary, which is only exact for
-        /// convex rings but is a reasonable read-back for polygon-shaped patches from other tools.
+        /// A lone FirstRing is ear-clipped as a simple planar polygon. ArcGIS defines following
+        /// Ring patches as belonging to that same polygon, so those groups are rejected until hole
+        /// tessellation is implemented instead of being silently filled or discarded.
         /// </summary>
         private static NeutralGeometry ReadMultipatch(Multipatch multipatch)
         {
@@ -141,10 +142,26 @@ namespace RhinoArcGIS.ArcGIS
                         break;
 
                     case PatchType.FirstRing:
-                    case PatchType.Ring:
-                        for (int i = 1; i + 1 < count; i++)
-                            faces.Add(new[] { start, start + i, start + i + 1 });
+                    {
+                        if (patchIndex + 1 < multipatch.PartCount &&
+                            multipatch.GetPatchType(patchIndex + 1) == PatchType.Ring)
+                            throw new System.NotSupportedException(
+                                "Multipatch FirstRing/Ring groups may contain holes; this input is not supported until hole tessellation is available.");
+                        var ring = new List<CoreXyz>(count);
+                        for (int i = 0; i < count; i++) ring.Add(vertices[start + i]);
+                        var triangles = PlanarRingTriangulation.TriangulateRingGroup(
+                            new IReadOnlyList<CoreXyz>[] { ring });
+                        foreach (int[] triangle in triangles)
+                            faces.Add(new[] { start + triangle[0], start + triangle[1], start + triangle[2] });
                         break;
+                    }
+
+                    case PatchType.Ring:
+                        throw new System.NotSupportedException(
+                            "Multipatch Ring patches belong to a ring group that may contain holes; this input is not supported until hole tessellation is available.");
+
+                    default:
+                        throw new System.NotSupportedException($"Multipatch patch type '{type}' is not supported.");
                 }
             }
 

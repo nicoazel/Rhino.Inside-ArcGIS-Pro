@@ -135,6 +135,27 @@ namespace RhinoInside.ArcGISPro
             });
         }
 
+        sealed class LinkContext
+        {
+            internal LayerLink Link;
+            internal uint DocumentSerial;
+        }
+
+        static LinkContext CaptureLinkContext(JObject args) => OnUi(() => new LinkContext
+        {
+            Link = GetLink(args), DocumentSerial = RhinoHost.GetActiveDocumentSerial()
+        });
+
+        static void RequireLinkContext(LinkContext context, JObject args)
+        {
+            if (context.DocumentSerial == 0 || RhinoHost.GetActiveDocumentSerial() != context.DocumentSerial)
+                throw new InvalidOperationException("The active Rhino document changed after the request; nothing was written. Refresh rhino_links and review again.");
+            var current = GetLink(args);
+            if (current.Direction != context.Link.Direction ||
+                !string.Equals(current.ProfileJson, context.Link.ProfileJson, StringComparison.Ordinal))
+                throw new InvalidOperationException("The saved link settings changed after the request; nothing was written. Refresh rhino_links and review again.");
+        }
+
         static object Report(SyncReport report) => new
         {
             operation = report.Operation.ToString(),
@@ -175,7 +196,7 @@ namespace RhinoInside.ArcGISPro
                         stopping.ThrowIfCancellationRequested();
                         RhinoHost.Start();
                         return new { started = RhinoHost.IsStarted };
-                    }).ConfigureAwait(false);
+                    }, stopping).ConfigureAwait(false);
                 case "rhino_save":
                     Validate(args);
                     return await SyncCoordinator.RunHostActionAsync<object>(() =>
@@ -189,32 +210,36 @@ namespace RhinoInside.ArcGISPro
                         string path = RhinoHost.SaveActiveDocument();
                         if (path == null) throw new InvalidOperationException("Save was cancelled; no document was saved.");
                         return new { savedPath = path };
-                    }).ConfigureAwait(false);
+                    }, stopping).ConfigureAwait(false);
                 case "rhino_profile":
                 case "rhino_preview":
                 case "rhino_pull":
                 case "rhino_apply":
                     Validate(args, "arcgisLayer", "rhinoLayer", "expectedSource",
                         operation == "rhino_pull" ? "selectedOnly" : operation == "rhino_apply" ? "conflicts" : "expectedSource");
-                    var link = GetLink(args);
+                    var context = CaptureLinkContext(args);
+                    var link = context.Link;
                     string target = link.ArcGisLayer + " ↔ " + link.EffectiveRhinoLayer + "\nSource: " + link.ArcGisSource + "\nDirection: " + link.Direction;
                     if (operation == "rhino_profile")
                     {
                         var draft = await SyncCoordinator.GetProfileDraftAsync(link.ArcGisLayer, link.EffectiveRhinoLayer,
-                            link.ProfileJson, link.ArcGisSource).ConfigureAwait(false);
+                            link.ProfileJson, link.ArcGisSource, () => RequireLinkContext(context, args),
+                            context.DocumentSerial, stopping).ConfigureAwait(false);
                         return new { draft.Schema, draft.Profile };
                     }
                     if (operation == "rhino_preview")
                         return Report(await SyncCoordinator.PreviewAsync(link.ArcGisLayer, link.EffectiveRhinoLayer,
-                            link.Direction, link.ProfileJson, link.ArcGisSource).ConfigureAwait(false));
+                            link.Direction, link.ProfileJson, link.ArcGisSource, () => RequireLinkContext(context, args),
+                            context.DocumentSerial, stopping).ConfigureAwait(false));
                     if (operation == "rhino_pull")
                     {
                         if (args["selectedOnly"] != null && args["selectedOnly"].Type != JTokenType.Boolean)
                             throw new ArgumentException("selectedOnly must be a boolean.");
                         bool selected = (bool?)args["selectedOnly"] ?? false;
-                        RequireApproval("pull ArcGIS features into Rhino", target + "\nSelected only: " + selected);
-                        return Report(await SyncCoordinator.PullAsync(link.ArcGisLayer, link.EffectiveRhinoLayer,
-                            selected, link.ProfileJson, link.ArcGisSource).ConfigureAwait(false));
+                        return Report(await SyncCoordinator.ReviewAndPullAsync(link.ArcGisLayer, link.EffectiveRhinoLayer,
+                            selected, link.ProfileJson, link.ArcGisSource,
+                            () => Approve("pull ArcGIS features into Rhino", target + "\nSelected only: " + selected),
+                            () => RequireLinkContext(context, args), stopping).ConfigureAwait(false));
                     }
                     var conflicts = ConflictResolution.Manual;
                     if (args["conflicts"] != null && (args["conflicts"].Type != JTokenType.String ||
@@ -225,7 +250,8 @@ namespace RhinoInside.ArcGISPro
                         Approve("apply synchronization", target + "\nConflict policy: " + conflicts + "\n\n" +
                             string.Join("\n", preview.Entries.GroupBy(e => e.Outcome).Select(g => g.Key + ": " + g.Count())) +
                             "\n\n" + string.Join("\n", preview.Entries.Where(e => e.Message != "Clean").Take(20)
-                                .Select(e => e.Outcome + ": " + e.Message + " " + e.Detail)))).ConfigureAwait(false));
+                                .Select(e => e.Outcome + ": " + e.Message + " " + e.Detail))),
+                        () => RequireLinkContext(context, args), stopping).ConfigureAwait(false));
                 default:
                     throw new ArgumentException("Unknown typed operation.");
             }

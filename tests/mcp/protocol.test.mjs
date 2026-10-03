@@ -14,6 +14,30 @@ const modernMeta = {
 };
 const modernRpc = (method, params = {}) => rpc(method, { ...params, _meta: modernMeta });
 
+test('an initialized notification cannot bypass the legacy initialize handshake', { timeout: 10000 }, async () => {
+  const serverPath = fileURLToPath(new URL('../../tools/mcp/server.mjs', import.meta.url));
+  const child = spawn(process.execPath, [serverPath], { stdio: ['pipe', 'pipe', 'pipe'] });
+  let output = '';
+  let errors = '';
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', chunk => output += chunk);
+  child.stderr.on('data', chunk => errors += chunk);
+  const initialized = { jsonrpc: '2.0', method: 'notifications/initialized' };
+  child.stdin.end([
+    initialized, rpc('tools/list'), rpc('initialize', { protocolVersion: '2025-11-25' }),
+    rpc('tools/list'), initialized, rpc('tools/list')
+  ].map(request => JSON.stringify(request) + '\n').join(''));
+  const [code] = await once(child, 'close');
+  assert.equal(code, 0, errors);
+  const replies = output.trim().split('\n').map(line => JSON.parse(line));
+  assert.equal(replies.length, 4);
+  assert.equal(replies[0].error.code, -32000);
+  assert.equal(replies[1].result.protocolVersion, '2025-11-25');
+  assert.equal(replies[2].error.code, -32000);
+  assert.equal(replies[3].result.tools.length, 8);
+});
+
 test('initialize and tool discovery work without contacting an ArcGIS host', async () => {
   const forbidden = () => { throw new Error('Host must not be contacted.'); };
   const init = await handleRequest(rpc('initialize', { protocolVersion: '2025-11-25' }), forbidden);

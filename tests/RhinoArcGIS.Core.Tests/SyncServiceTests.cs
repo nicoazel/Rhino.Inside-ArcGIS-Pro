@@ -87,6 +87,56 @@ namespace RhinoArcGIS.Core.Tests
         }
 
         [Fact]
+        public void Changed_write_context_after_planning_prevents_arcgis_create_and_rhino_baseline()
+        {
+            var rhino = new FakeRhino { Objects = { Snap(null, "PV", null, null) } };
+            var arc = new FakeArcGis { Schema = Schema() };
+            bool contextValid = true;
+            arc.BeforeSchemaRead = () => contextValid = false;
+            var service = new SyncService(arc, rhino)
+            {
+                ValidateWriteContext = () =>
+                {
+                    if (!contextValid) throw new InvalidOperationException("The active Rhino document changed.");
+                }
+            };
+            var profile = Profile();
+
+            Assert.Throws<InvalidOperationException>(() =>
+                service.Sync(profile, profile.Layers[0], new SyncOptions()));
+
+            Assert.Empty(arc.Created);
+            Assert.Empty(arc.Features);
+            Assert.Empty(rhino.Written);
+        }
+
+        [Fact]
+        public void Changed_write_context_after_planning_prevents_arcgis_update_and_rhino_baseline()
+        {
+            var geometryHash = Hashing.HashGeometry(NeutralGeometry.Point(new Xyz(0, 0, 0)));
+            var snap = Snap(10, "edited", "PV", geometryHash);
+            var rhino = new FakeRhino { Objects = { snap } };
+            var arc = new FakeArcGis { Schema = Schema(), Features = { Feat(10, "PV") } };
+            bool contextValid = true;
+            arc.BeforeSchemaRead = () => contextValid = false;
+            var profile = Profile();
+            var service = new SyncService(arc, rhino)
+            {
+                ValidateWriteContext = () =>
+                {
+                    if (!contextValid) throw new InvalidOperationException("The active Rhino document changed.");
+                }
+            };
+
+            Assert.Throws<InvalidOperationException>(() => service.Sync(profile, profile.Layers[0], new SyncOptions()));
+
+            Assert.Empty(arc.Updated);
+            Assert.Equal("PV", arc.Features.Single().Attributes["asset_type"]);
+            Assert.Empty(rhino.Written);
+            Assert.Equal(Hashing.HashField("PV"), snap.UserStrings[GisKeys.FieldHashKey("asset_type")]);
+        }
+
+        [Fact]
         public void New_in_rhino_reports_missing_non_empty_profile_value()
         {
             var snap = Snap(null, null, null, null);
@@ -641,6 +691,66 @@ namespace RhinoArcGIS.Core.Tests
         }
 
         [Fact]
+        public void Changed_source_is_not_adopted_for_a_manual_conflict()
+        {
+            var snap = Snap(10, "Rhino edit", "PV", Hashing.HashGeometry(NeutralGeometry.Point(new Xyz(0, 0, 0))));
+            snap.UserStrings[GisKeys.ArcGisSource] = @"C:\data\original\pts.shp";
+            var rhino = new FakeRhino { Objects = { snap } };
+            var arc = new FakeArcGis { Schema = Schema(), Features = { Feat(10, "ArcGIS edit") } };
+            var profile = Profile();
+            profile.Layers[0].ArcGisSource = @"C:\data\other-copy\pts.shp";
+
+            var report = new SyncService(arc, rhino).Sync(profile, profile.Layers[0],
+                new SyncOptions { Conflicts = ConflictResolution.Manual });
+
+            Assert.Equal(@"C:\data\original\pts.shp", snap.UserStrings[GisKeys.ArcGisSource]);
+            Assert.Empty(rhino.Written);
+            Assert.Empty(arc.Updated);
+            Assert.Contains(report.Entries, entry => entry.Outcome == SyncOutcome.Conflict);
+            Assert.Contains(report.Entries, entry => entry.Outcome == SyncOutcome.Warning &&
+                entry.Message.Contains("Source changed"));
+        }
+
+        [Fact]
+        public void Changed_source_is_not_adopted_for_a_one_way_held_edit()
+        {
+            var snap = Snap(10, "Rhino edit", "PV", Hashing.HashGeometry(NeutralGeometry.Point(new Xyz(0, 0, 0))));
+            snap.UserStrings[GisKeys.ArcGisSource] = @"C:\data\original\pts.shp";
+            var rhino = new FakeRhino { Objects = { snap } };
+            var arc = new FakeArcGis { Schema = Schema(), Features = { Feat(10, "PV") } };
+            var profile = Profile();
+            profile.Layers[0].ArcGisSource = @"C:\data\other-copy\pts.shp";
+
+            var report = new SyncService(arc, rhino).Sync(profile, profile.Layers[0],
+                new SyncOptions { Direction = SyncDirectionMode.PullOnly });
+
+            Assert.Equal(@"C:\data\original\pts.shp", snap.UserStrings[GisKeys.ArcGisSource]);
+            Assert.Empty(rhino.Written);
+            Assert.Empty(arc.Updated);
+            Assert.Contains(report.Entries, entry => entry.Outcome == SyncOutcome.Held);
+            Assert.Contains(report.Entries, entry => entry.Outcome == SyncOutcome.Warning &&
+                entry.Message.Contains("Source changed"));
+        }
+
+        [Fact]
+        public void Changed_source_is_not_adopted_when_arcgis_update_fails()
+        {
+            var snap = Snap(10, "Rhino edit", "PV", Hashing.HashGeometry(NeutralGeometry.Point(new Xyz(0, 0, 0))));
+            snap.UserStrings[GisKeys.ArcGisSource] = @"C:\data\original\pts.shp";
+            var rhino = new FakeRhino { Objects = { snap } };
+            var arc = new FakeArcGis { Schema = Schema(), Features = { Feat(10, "PV") }, FailUpdate = true };
+            var profile = Profile();
+            profile.Layers[0].ArcGisSource = @"C:\data\other-copy\pts.shp";
+
+            Assert.Throws<InvalidOperationException>(() =>
+                new SyncService(arc, rhino).Sync(profile, profile.Layers[0], new SyncOptions()));
+
+            Assert.Equal(@"C:\data\original\pts.shp", snap.UserStrings[GisKeys.ArcGisSource]);
+            Assert.Empty(rhino.Written);
+            Assert.Empty(arc.Updated);
+        }
+
+        [Fact]
         public void Conflict_in_manual_mode_is_held_and_nothing_is_written()
         {
             var rhino = new FakeRhino { Objects = { Snap(10, "R", "PV", Hashing.HashGeometry(NeutralGeometry.Point(new Xyz(0, 0, 0)))) } };
@@ -694,7 +804,13 @@ namespace RhinoArcGIS.Core.Tests
             public List<FeatureRecord> Features { get; } = new List<FeatureRecord>();
             public List<FeatureRecord> Created { get; } = new List<FeatureRecord>();
             public List<FeatureRecord> Updated { get; } = new List<FeatureRecord>();
-            public LayerSchema GetSchema(string layerName) => Schema;
+            public bool FailUpdate { get; set; }
+            public Action BeforeSchemaRead { get; set; }
+            public LayerSchema GetSchema(string layerName)
+            {
+                BeforeSchemaRead?.Invoke();
+                return Schema;
+            }
             public IReadOnlyList<FeatureRecord> ReadFeatures(string layerName) => Features;
 
             /// <summary>
@@ -723,6 +839,7 @@ namespace RhinoArcGIS.Core.Tests
             }
             public void UpdateFeatures(string layerName, IReadOnlyList<FeatureRecord> features)
             {
+                if (FailUpdate) throw new InvalidOperationException("Update rejected by test adapter.");
                 Updated.AddRange(features);
                 foreach (var update in features)
                 {

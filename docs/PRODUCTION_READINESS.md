@@ -32,6 +32,8 @@ defines their requirements. Historical logs and scratch projects are retained pr
 
 - Multipatch conversion is mesh-based and does not preserve NURBS parameters, analytic surfaces
   or materials.
+- Simple planar FirstRing multipatch faces support concavity. Multi-ring groups, including holes,
+  are rejected; tessellate them to triangle patches in ArcGIS before exchange.
 - Empty or unsupported Rhino layers cannot infer a new GIS feature-class type.
 - Detected deletions are held; they are not automatically mirrored.
 - Manual conflict policy holds conflicts. Per-object decisions are not available in this release.

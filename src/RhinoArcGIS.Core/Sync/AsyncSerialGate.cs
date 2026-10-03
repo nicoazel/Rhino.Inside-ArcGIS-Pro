@@ -18,13 +18,14 @@ namespace RhinoArcGIS.Core.Sync
         /// <summary>Whether an operation is running or waiting its turn.</summary>
         public bool IsBusy => _semaphore.CurrentCount == 0;
 
-        public async Task<T> RunAsync<T>(Func<Task<T>> operation)
+        public async Task<T> RunAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default)
         {
             if (operation == null) throw new ArgumentNullException(nameof(operation));
 
-            await _semaphore.WaitAsync().ConfigureAwait(false);
+            await _semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 return await operation().ConfigureAwait(false);
             }
             finally

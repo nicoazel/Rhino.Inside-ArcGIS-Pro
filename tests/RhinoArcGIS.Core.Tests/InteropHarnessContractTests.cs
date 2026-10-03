@@ -13,7 +13,7 @@ namespace RhinoArcGIS.Core.Tests
                 "src", "RhinoInside.ArcGISPro", "Model", "SyncCoordinator.cs"));
 
             Assert.Equal(1, Count(source, "ExecutionGate.RunAsync("));
-            Assert.Equal(7, Count(source, "RunGatedAsync(() =>"));
+            Assert.Equal(8, Count(source, "RunGatedAsync(() =>"));
             Assert.Contains("ReviewAndApplyAsync", source);
             Assert.Contains("RunHostActionAsync", source);
             Assert.Contains("RunCore(arcgisLayer, rhino,", source);

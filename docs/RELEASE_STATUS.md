@@ -14,24 +14,25 @@ It does not register its tools in the companion registry. See [MCP control](MCP_
 the tool boundary and local-review policy. Dedicated Grasshopper components, advanced sync filters,
 new-link/profile authoring through MCP and vertical datum transformation remain outside this candidate.
 
-Portable test, offline protocol, source compilation, dependency metadata and secrets checks are
-prepublication checks. They do not establish installed-package compatibility. The exact-package
-matrix in two independent clean hosts, UI/keyboard inspection, MCP local dialogs, companion
-coexistence and shutdown/reopen acceptance are pending. Live tests were intentionally deferred while
-another agent was working in ArcGIS Pro.
+RC1 passed an isolated live six-fixture matrix (284 checks), actual stdio MCP control with local
+review dialogs (23 checks), and persistence in a second process (6 checks); both owned hosts closed
+cleanly. RC2 hardens review-to-write document binding, batch document guards, project switching,
+queued shutdown cancellation, successful source adoption and concave multipatch ring tessellation.
+Portable tests and compilation do not establish exact installer compatibility. Two full matrices
+against the final installer, companion coexistence and the full visual/keyboard matrix remain pending.
 
 Checks completed for this source candidate on 2026-10-03:
 
-- Core: 307 passed, 0 failed, 0 skipped.
-- Offline MCP and release contracts: 16 passed, including a synthetic Windows pipe transport.
+- Core: 327 passed, 0 failed, 0 skipped.
+- Offline MCP and release contracts: 17 passed, including a synthetic Windows pipe transport.
 - Compile-only Release build: 0 warnings, 0 errors, with Esri packaging/registration disabled.
 - Fixtures: 30 manifest hashes verified; repeated generation produced identical bytes.
 - Website: four pages built and local links/anchors checked; candidate has no download links.
 - Source secrets scan: no findings. Dependency audit: no known vulnerable packages from the configured sources.
 
-These are source preparation results, not an installed-package validation record. The optional
-MCP shutdown behavior also needs a multi-add-in check when another module vetoes unload after the
-closing event; see [MCP control](MCP_CONTROL.md).
+Release attachments record the exact source revision, loaded DLL hashes and live evidence for each
+candidate. The optional MCP shutdown behavior also needs a multi-add-in check when another module
+vetoes unload after the closing event; see [MCP control](MCP_CONTROL.md).
 
 The new GitHub destination is configured in `site/release.json`. Changing that value or
 `SITE_REPOSITORY` updates generated site links; both must agree for deployment. Do not change the

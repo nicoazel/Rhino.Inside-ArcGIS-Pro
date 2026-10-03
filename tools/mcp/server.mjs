@@ -5,6 +5,7 @@ process.stdin.setEncoding('utf8');
 let pending = '';
 let queue = Promise.resolve();
 let legacyInitialized = false;
+let legacyInitializeSeen = false;
 function send(value) { if (value) process.stdout.write(JSON.stringify(value) + '\n'); }
 
 function isModernRequest(request) {
@@ -24,13 +25,17 @@ process.stdin.on('data', chunk => {
     queue = queue.then(async () => {
       let request;
       try { request = JSON.parse(line); } catch { return send({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error.' } }); }
-      if (request?.method === 'notifications/initialized' && !Object.hasOwn(request ?? {}, 'id'))
+      if (legacyInitializeSeen && request?.jsonrpc === '2.0' &&
+          request?.method === 'notifications/initialized' && !Object.hasOwn(request ?? {}, 'id'))
         legacyInitialized = true;
       if (Object.hasOwn(request ?? {}, 'id') && !isModernRequest(request) &&
           !legacyInitialized && !['initialize', 'ping'].includes(request.method)) {
         return send({ jsonrpc: '2.0', id: request.id, error: { code: -32000, message: 'Initialize the MCP session first.' } });
       }
-      send(await handleRequest(request, r => invokePipe(process.env.RHINOINSIDE_MCP_HOST_PID, r)));
+      const response = await handleRequest(request, r => invokePipe(process.env.RHINOINSIDE_MCP_HOST_PID, r));
+      if (request?.method === 'initialize' && response?.result?.protocolVersion)
+        legacyInitializeSeen = true;
+      send(response);
     }).catch(error => process.stderr.write(error.message + '\n'));
   }
 });

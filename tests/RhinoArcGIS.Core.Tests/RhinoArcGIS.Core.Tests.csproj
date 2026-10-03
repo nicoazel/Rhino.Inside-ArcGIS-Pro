@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RhinoArcGIS.Core\RhinoArcGIS.Core.csproj" />
+    <!-- Exercise the real chunking and document guard with an inline test dispatcher; no WPF or host is loaded. -->
+    <Compile Include="..\..\src\RhinoInside.ArcGISPro\Model\UiThreadRhinoAdapter.cs" Link="HostLogic\UiThreadRhinoAdapter.cs" />
   </ItemGroup>
 
 </Project>

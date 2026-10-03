@@ -4,8 +4,9 @@ Rhino.Inside-ArcGIS hosts Rhino 8 inside ArcGIS Pro 3.7 and keeps ArcGIS feature
 Rhino layers. It supports preview-before-write synchronization for Point Z, Polyline Z, Polygon Z,
 multipart polygons and Multipatch geometry, including attributes and durable GlobalID identity.
 
-**Source candidate:** portable checks and compilation do not certify the installed add-in. The
-two-host runtime matrix, MCP coexistence and visual acceptance remain pending. See
+**Source candidate:** isolated live sync, MCP review and reopen checks passed for RC1. The
+review hardening in RC2 adds document guards, cancellation and geometry regressions. Exact installer,
+MCP coexistence and full visual acceptance remain pending. See
 [release status](docs/RELEASE_STATUS.md) for the current boundary.
 
 The [public website](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/) is generated from [`site/`](site/). See the
@@ -16,8 +17,8 @@ The [public website](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/) is gen
 
 The source candidate also includes optional [embedded Rhino MCP control](docs/MCP_CONTROL.md):
 status, saved links, profiles and preview, plus locally reviewed launch, pull, apply and save.
-It runs alongside the ArcGISPro.MCP gateway with explicit host-PID selection. Its embedded-host
-acceptance is pending; public installer certification must include both projects' coexistence.
+It uses explicit host-PID selection. Public installer certification must include coexistence with
+the separately installed ArcGISPro.MCP gateway.
 
 - Pull ArcGIS features into editable, tracked Rhino geometry.
 - Preview object, geometry and field changes without writing either model.

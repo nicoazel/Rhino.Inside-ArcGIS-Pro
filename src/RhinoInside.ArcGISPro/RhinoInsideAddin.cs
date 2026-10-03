@@ -58,7 +58,12 @@ namespace RhinoInside.ArcGISPro
             // memory must follow map views and must not outlive the project.
             ArcGIS.Desktop.Mapping.Events.ActiveMapViewChangedEvent.Subscribe(e =>
                 RhinoArcGIS.ArcGIS.ActiveMap.Remember(e.IncomingView?.Map));
-            ArcGIS.Desktop.Core.Events.ProjectClosedEvent.Subscribe(_ => RhinoArcGIS.ArcGIS.ActiveMap.Forget());
+            ArcGIS.Desktop.Core.Events.ProjectClosedEvent.Subscribe(_ =>
+            {
+                RhinoArcGIS.ArcGIS.ActiveMap.Forget();
+                // A project without module settings does not call OnReadSettingsAsync.
+                _pendingRhinoDocumentPath = null;
+            });
 
             return base.Initialize();
         }
@@ -137,7 +142,8 @@ namespace RhinoInside.ArcGISPro
         protected override Task OnWriteSettingsAsync(ModuleSettingsWriter settings)
         {
             // Only a real file: an unsaved document has nothing to reopen.
-            string path = RhinoHost.GetActiveDocumentPath();
+            // Saving the ArcGIS project before Launch Rhino must preserve its remembered .3dm.
+            string path = RhinoHost.GetActiveDocumentPath() ?? _pendingRhinoDocumentPath;
             if (!string.IsNullOrEmpty(path)) settings.Add(RhinoDocumentPathKey, path);
             return Task.FromResult(true);
         }
@@ -146,10 +152,12 @@ namespace RhinoInside.ArcGISPro
         void OnRhinoStarted(object sender, EventArgs e)
         {
             string path = _pendingRhinoDocumentPath;
-            _pendingRhinoDocumentPath = null;
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
 
-            try { RhinoHost.OpenProjectDocument(path); }
+            try
+            {
+                if (RhinoHost.OpenProjectDocument(path)) _pendingRhinoDocumentPath = null;
+            }
             catch (Exception ex) { TestBridge.Log($"Could not reopen saved Rhino document '{path}': {ex}"); }
         }
 

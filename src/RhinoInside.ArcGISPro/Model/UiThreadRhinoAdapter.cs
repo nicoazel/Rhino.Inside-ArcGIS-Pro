@@ -26,11 +26,19 @@ namespace RhinoInside.ArcGISPro
     {
         readonly IRhinoAdapter _inner;
         readonly Dispatcher _dispatcher;
+        readonly Func<uint> _documentSerial;
+        readonly uint _expectedDocumentSerial;
 
-        internal UiThreadRhinoAdapter(IRhinoAdapter inner, Dispatcher dispatcher)
+        internal UiThreadRhinoAdapter(IRhinoAdapter inner, Dispatcher dispatcher, Func<uint> documentSerial,
+                                     uint expectedDocumentSerial = 0)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+            _documentSerial = documentSerial ?? throw new ArgumentNullException(nameof(documentSerial));
+            _expectedDocumentSerial = expectedDocumentSerial != 0 ? expectedDocumentSerial :
+                (_dispatcher.CheckAccess() ? documentSerial() : _dispatcher.Invoke(documentSerial));
+            if (_expectedDocumentSerial == 0)
+                throw new InvalidOperationException("No active Rhino document; launch Rhino before synchronizing.");
         }
 
         // IEarthAnchorSource must be forwarded too: GeoReferenceFactory tests the adapter for it,
@@ -43,12 +51,23 @@ namespace RhinoInside.ArcGISPro
         public AffineTransform GetModelToEarthMetres() =>
             OnUi(() => (_inner as IEarthAnchorSource)?.GetModelToEarthMetres());
 
-        T OnUi<T>(Func<T> func) => _dispatcher.CheckAccess() ? func() : _dispatcher.Invoke(func);
+        void RequireDocument()
+        {
+            if (_documentSerial() != _expectedDocumentSerial)
+                throw new InvalidOperationException("The active Rhino document changed during synchronization; no further writes were made. Return to the original document and preview again.");
+        }
+
+        T OnUi<T>(Func<T> func)
+        {
+            T Guarded() { RequireDocument(); return func(); }
+            return _dispatcher.CheckAccess() ? Guarded() : _dispatcher.Invoke(Guarded);
+        }
 
         void OnUi(Action action)
         {
-            if (_dispatcher.CheckAccess()) action();
-            else _dispatcher.Invoke(action);
+            void Guarded() { RequireDocument(); action(); }
+            if (_dispatcher.CheckAccess()) Guarded();
+            else _dispatcher.Invoke(Guarded);
         }
 
         public UnitSystem GetUnits() => OnUi(() => _inner.GetUnits());

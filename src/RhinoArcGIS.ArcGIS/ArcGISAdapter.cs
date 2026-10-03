@@ -37,6 +37,9 @@ namespace RhinoArcGIS.ArcGIS
         /// <summary>Durable backing data identity captured from the saved document link for this run.</summary>
         public string ExpectedSource { get; set; }
 
+        /// <summary>Optional host-context validation immediately before a geodatabase edit executes.</summary>
+        public Action ValidateWriteContext { get; set; }
+
         /// <summary>The frame this adapter last measured, for reporting which datum transformation was used.</summary>
         public LocalFrame LastFrame { get; private set; }
 
@@ -462,6 +465,7 @@ namespace RhinoArcGIS.ArcGIS
 
         private void EnsureTargetBeforeWrite(string layerName, FeatureLayer preparedLayer)
         {
+            ValidateWriteContext?.Invoke();
             var current = FindLayer(layerName);
             if (current == null ||
                 !string.Equals(current.URI, preparedLayer.URI, StringComparison.OrdinalIgnoreCase) ||

@@ -53,6 +53,13 @@ namespace RhinoArcGIS.Core.Sync
         /// </summary>
         public Action<string> Notice { get; set; }
 
+        /// <summary>
+        /// Validates that the apply context is still current immediately before writing to ArcGIS.
+        /// The host supplies a document/link guard so a switched Rhino document cannot commit
+        /// GIS edits from a plan built against the previous document.
+        /// </summary>
+        public Action ValidateWriteContext { get; set; }
+
         private void Say(string message) => Progress?.Invoke(message);
 
         private Action<int, int> Counting(string what) =>
@@ -96,6 +103,7 @@ namespace RhinoArcGIS.Core.Sync
             SyncPlan plan = report.Time("plan", () => _engine.BuildPlan(map, layer, rhinoObjects, arcgisFeatures, ledger));
 
             var staleSource = ObjectsWithOtherSource(rhinoObjects, layer, out string sourceWarning);
+            var staleSourceIds = new HashSet<Guid>(staleSource.Select(snap => snap.RhinoGuid));
             if (sourceWarning != null)
                 report.Add(Guid.Empty, layer.ArcGisLayer, SyncOutcome.Warning, sourceWarning);
             if (foreignWarning != null)
@@ -107,14 +115,6 @@ namespace RhinoArcGIS.Core.Sync
                     Describe(report.Add(d.SyncGuid, layer.ArcGisLayer, ToOutcome(d.State), d.State.ToString()), d);
                 return report;
             }
-
-            // Applying against the new source is accepting it: record it on every object that
-            // still names the old one, so the warning does not come back next time.
-            foreach (var snap in staleSource)
-                _rhino.WriteUserStrings(snap.RhinoGuid, new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    { GisKeys.ArcGisSource, layer.ArcGisSource }
-                });
 
             LayerSchema schema = _arcgis.GetSchema(layer.ArcGisLayer);
             var byKey = BuildFieldIndex(layer);
@@ -182,9 +182,17 @@ namespace RhinoArcGIS.Core.Sync
             if (creates.Count + updates.Count > 0)
                 Say($"Writing {(creates.Count + updates.Count).ToString("N0", CultureInfo.InvariantCulture)} change(s) to ArcGIS…");
             IReadOnlyList<long> newOids = creates.Count > 0
-                ? report.Time("push.create", () => _arcgis.CreateFeatures(layer.ArcGisLayer, creates))
+                ? report.Time("push.create", () =>
+                {
+                    ValidateWriteContext?.Invoke();
+                    return _arcgis.CreateFeatures(layer.ArcGisLayer, creates);
+                })
                 : new List<long>();
-            if (updates.Count > 0) report.Time("push.update", () => _arcgis.UpdateFeatures(layer.ArcGisLayer, updates));
+            if (updates.Count > 0) report.Time("push.update", () =>
+            {
+                ValidateWriteContext?.Invoke();
+                _arcgis.UpdateFeatures(layer.ArcGisLayer, updates);
+            });
 
             for (int i = 0; i < createSources.Count; i++)
                 createSources[i].ArcGisObjectId = (newOids != null && i < newOids.Count) ? newOids[i] : (long?)null;
@@ -259,6 +267,10 @@ namespace RhinoArcGIS.Core.Sync
                                 identity[GisKeys.RhinoObjectId] = d.RhinoGuid.Value.ToString();
                             if (d.IdentityRepaired && d.ArcGisObjectId.HasValue)
                                 identity[GisKeys.ArcGisObjectId] = d.ArcGisObjectId.Value.ToString(CultureInfo.InvariantCulture);
+                            // Source acceptance is part of a completed decision's normal write.
+                            // Conflicts, held/deleted objects, and failed operations never reach it.
+                            if (staleSourceIds.Contains(d.RhinoGuid.Value))
+                                identity[GisKeys.ArcGisSource] = layer.ArcGisSource;
                             if (identity.Count > 0)
                                 baselines.Add(new KeyValuePair<Guid, IReadOnlyDictionary<string, string>>(d.RhinoGuid.Value, identity));
                         }
