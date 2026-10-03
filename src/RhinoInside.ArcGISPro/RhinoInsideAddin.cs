@@ -143,7 +143,9 @@ namespace RhinoInside.ArcGISPro
         {
             // Only a real file: an unsaved document has nothing to reopen.
             // Saving the ArcGIS project before Launch Rhino must preserve its remembered .3dm.
-            string path = RhinoHost.GetActiveDocumentPath() ?? _pendingRhinoDocumentPath;
+            // A missing or declined restore is still this project's association. Do not
+            // silently replace it with a different document left active by another project.
+            string path = _pendingRhinoDocumentPath ?? RhinoHost.GetActiveDocumentPath();
             if (!string.IsNullOrEmpty(path)) settings.Add(RhinoDocumentPathKey, path);
             return Task.FromResult(true);
         }
