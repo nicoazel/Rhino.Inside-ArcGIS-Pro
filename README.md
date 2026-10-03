@@ -8,7 +8,7 @@ multipart polygons and Multipatch geometry, including attributes and durable Glo
 two-host runtime matrix, MCP coexistence and visual acceptance remain pending. See
 [release status](docs/RELEASE_STATUS.md) for the current boundary.
 
-The [public website](https://nicoazel.github.io/RhinoInside-ArcGIS-Pro/) is generated from [`site/`](site/). See the
+The [public website](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/) is generated from [`site/`](site/). See the
 [installation and release preparation](docs/PUBLISHING.md) and
 [acknowledgements](ACKNOWLEDGEMENTS.md). This repository is licensed under [MIT](LICENSE).
 

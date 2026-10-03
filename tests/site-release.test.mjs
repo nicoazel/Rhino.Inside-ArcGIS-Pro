@@ -72,8 +72,8 @@ test('rejects source or tag commit mismatch and invalid repository paths', () =>
 });
 
 test('candidate and published repository configuration must agree', () => {
-  assert.equal(resolveSiteRepository('nicoazel/RhinoInside-ArcGIS-Pro', 'nicoazel/RhinoInside-ArcGIS-Pro'), 'nicoazel/RhinoInside-ArcGIS-Pro');
-  assert.throws(() => resolveSiteRepository('nicoazel/RhinoInside-ArcGIS-Pro', 'other/Public'), /does not match SITE_REPOSITORY/);
+  assert.equal(resolveSiteRepository('nicoazel/Rhino.Inside-ArcGIS-Pro', 'nicoazel/Rhino.Inside-ArcGIS-Pro'), 'nicoazel/Rhino.Inside-ArcGIS-Pro');
+  assert.throws(() => resolveSiteRepository('nicoazel/Rhino.Inside-ArcGIS-Pro', 'other/Public'), /does not match SITE_REPOSITORY/);
   assert.throws(() => resolveSiteRepository('owner/repo/releases', undefined), /OWNER\/NAME/);
 });
 
