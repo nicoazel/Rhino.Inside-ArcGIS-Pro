@@ -36,7 +36,8 @@ Per fixture layer the sequence is:
  12. delete the pushed feature in ArcGIS; preview -> exactly 1 "Deleted in ArcGIS"
  13. apply                      -> nothing recreated, still held
  14. swap the layer for a same-named copy from another folder; preview -> warns, still compares
- 15. apply                      -> adopts the new source; preview -> no warning
+ 15. apply                      -> completed objects adopt the new source; held deletion retains
+                                  its original source and warning
 
 After the loop: one deliberately broken link proves that Preview all isolates its failure and keeps
 the healthy link results. Disposable file-geodatabase layers then prove GlobalID-first matching,
@@ -510,10 +511,24 @@ foreach ($fixture in $Fixtures) {
         Check 'preview warns about a same-named layer over different data' ($r8['Warning'] -eq 1 -and $warn.Count -eq 1 -and $warn[0].Detail -match 'now reads from') (Describe-Report $p8) | Out-Null
         # The comparison still ran against the copy, which has the same features and ids.
         Check 'comparison against the copy still runs' ($p8.total -ge $N) (Describe-Report $p8) | Out-Null
+        $newSource = (Send-Bridge features @{ arcgisLayer = $swapped.name; take = 1 } -TimeoutSec 600).source
         Send-Bridge apply @{ arcgisLayer = $swapped.name } -TimeoutSec 900 | Out-Null
         $p9 = Send-Bridge preview @{ arcgisLayer = $swapped.name } -TimeoutSec 900
         $r9 = Rollup $p9
-        Check 'apply adopts the new source and the warning clears' (-not $r9.ContainsKey('Warning')) (Describe-Report $p9) | Out-Null
+        $sourceObjects = (Send-Bridge userstrings @{ layer = $L }).objects
+        $completed = @($sourceObjects.PSObject.Properties | Where-Object {
+            $_.Name -ne $newId -and $_.Value.'gis.arcgis_objectid'
+        })
+        $wrongSources = @($completed | Where-Object { $_.Value.'gis.arcgis_source' -ne $newSource })
+        Check 'completed objects adopt the copied source' `
+            ($newSource -and $newSource -ne $before.source -and $completed.Count -eq $N -and $wrongSources.Count -eq 0) `
+            ("completed={0} wrong sources={1}; source={2}" -f $completed.Count, $wrongSources.Count, $newSource) | Out-Null
+        $heldSource = $sourceObjects.$newId.'gis.arcgis_source'
+        Check 'held deletion keeps its original source' ($heldSource -eq $before.source) $heldSource | Out-Null
+        $remainingWarning = @($p9.changedRows | Where-Object { $_.State -eq 'Warning' })
+        Check 'source warning remains only for the held deletion' `
+            ($r9['Warning'] -eq 1 -and $r9['Deleted in ArcGIS'] -eq 1 -and $remainingWarning.Count -eq 1 -and $remainingWarning[0].Detail -match 'Source changed: 1 object') `
+            (Describe-Report $p9) | Out-Null
     }
     catch {
         Check 'fixture ran without a bridge error' $false $_.Exception.Message | Out-Null

@@ -401,7 +401,7 @@ namespace RhinoArcGIS.Core.Sync
             if (stale.Count > 0)
                 warning = $"Source changed: {stale.Count} object(s) on '{layer.RhinoLayer}' were pulled from {recordedExample} " +
                           $"but '{layer.ArcGisLayer}' now reads from {layer.ArcGisSource}. " +
-                          "The comparison below is against the new data; applying accepts it as the source.";
+                          "The comparison below is against the new data. Completed Apply decisions accept it as the source; held or failed objects retain their original source.";
             return stale;
         }
 
