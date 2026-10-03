@@ -26,6 +26,22 @@ release manifest. The release must contain the installer, versioned MCP gateway,
 the installer and gateway bytes against their manifest hashes and `SHA256SUMS.txt` entries. The
 validator checks public release assets; it does not fetch or certify live ArcGIS Pro or Rhino hosts.
 
+## Source prereleases
+
+The [v1.3.0-rc.1 source prerelease](https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/tag/v1.3.0-rc.1)
+contains a history-free source ZIP, its complete `PUBLIC-SOURCE-MANIFEST.json`, `SHA256SUMS.txt`,
+license notices and `SOURCE-VALIDATION.md`. Source prereleases are marked as prereleases and are
+not promoted to the latest stable release. They do not contain installable add-ins or separately
+packaged MCP gateways.
+
+For the next source candidate, run the portable and offline checks, commit the reviewed tree, and
+export that exact commit with `tools/export-public-source.ps1`. Package the export as a ZIP, verify
+every archived file against the manifest, and record the ZIP and attachment hashes. Tag the exact
+source commit with `v<version>-rc.<number>` and publish the reviewed artifacts and notes with
+`gh release create --prerelease --latest=false --verify-tag --notes-file <notes-file>`.
+Inspect the release and verify the public asset bytes without authentication. Keep the site's
+installer status at `candidate` until the independent licensed-host and exact-package gates pass.
+
 ## Installer
 
 Build on Windows with the .NET 10 SDK and the ArcGIS Pro 3.7 SDK build targets. Close ArcGIS Pro;
