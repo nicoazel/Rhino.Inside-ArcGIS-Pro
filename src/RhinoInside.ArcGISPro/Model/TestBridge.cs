@@ -339,11 +339,13 @@ namespace RhinoInside.ArcGISPro
                     return SetDefaultGeodatabase((string)request["path"]);
 
                 case "openproject":
-                    return new
-                    {
-                        opened = OnUi(() => ArcGIS.Desktop.Core.Project.OpenAsync((string)request["path"]))
-                            .GetAwaiter().GetResult()
-                    };
+                {
+                    var project = OnUi(() => ArcGIS.Desktop.Core.Project.OpenAsync((string)request["path"]))
+                        .GetAwaiter().GetResult();
+                    // SDK project properties can be thread-affine. Return a transport value,
+                    // rather than asking the reply serializer to walk the live project graph.
+                    return new { opened = project != null };
+                }
 
                 case "saveproject":
                     return new
