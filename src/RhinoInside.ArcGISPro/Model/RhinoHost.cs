@@ -65,6 +65,8 @@ namespace RhinoInside.ArcGISPro
         {
             if (_core != null) return;
 
+            CheckKnownStartupConflicts();
+
             if (!_resolverInitialized)
             {
                 InitializeResolver();
@@ -72,6 +74,41 @@ namespace RhinoInside.ArcGISPro
             }
 
             StartCore();
+        }
+
+        static void CheckKnownStartupConflicts()
+        {
+            if (string.Equals(Environment.GetEnvironmentVariable(SafeModeEnvironmentVariable), "1", StringComparison.Ordinal))
+                return;
+
+            // Observed native access violations name this exact V-Ray build on unload. Check
+            // before constructing RhinoCore: catching a managed exception cannot recover Pro
+            // from an unloaded native plug-in callback. Read settings only; never disable a
+            // standalone Rhino plug-in or change global load protection on the user's behalf.
+            const string plugin = @"SOFTWARE\McNeel\Rhinoceros\8.0\Plug-ins\e8cfe179-b60c-411a-8416-62a893334519";
+            using var protection = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"SOFTWARE\McNeel\Rhinoceros\8.0\Global Options\Plug-ins\e8cfe179-b60c-411a-8416-62a893334519");
+            if (string.Equals(Convert.ToString(protection?.GetValue("LoadProtection"), CultureInfo.InvariantCulture), "2", StringComparison.Ordinal))
+                return;
+            using var registration = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(plugin) ??
+                Microsoft.Win32.Registry.LocalMachine.OpenSubKey(plugin);
+            if (string.Equals(Convert.ToString(registration?.GetValue("LoadMode"), CultureInfo.InvariantCulture), "1", StringComparison.Ordinal))
+            {
+                using var location = registration.OpenSubKey("PlugIn");
+                var path = location?.GetValue("FileName") as string;
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    var version = System.Diagnostics.FileVersionInfo.GetVersionInfo(path);
+                    if (version.FileMajorPart == 6 && version.FileMinorPart == 10 &&
+                        version.FileBuildPart == 0 && version.FilePrivatePart == 0)
+                        throw new InvalidOperationException(
+                            "Rhino cannot start safely: V-Ray for Rhino 6.10.0.0 is configured to load at startup. " +
+                            "This configuration caused native ArcGIS Pro crashes during embedded Rhino shutdown. " +
+                            "Update V-Ray to a compatible Rhino 8 version, or disable this V-Ray plug-in in Rhino's Plug-in Manager, " +
+                            "then restart Pro. This add-in has not changed your plug-in settings. " +
+                            "RHINOINSIDE_ARCGIS_SAFE_MODE=1 is available for diagnostic isolation only.");
+                }
+            }
         }
 
         static void InitializeResolver()
