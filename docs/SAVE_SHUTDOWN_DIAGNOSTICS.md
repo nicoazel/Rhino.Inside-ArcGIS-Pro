@@ -37,6 +37,11 @@ it does not change standalone Rhino settings. Updating V-Ray or explicitly disab
 in Rhino's Plug-in Manager is a user action; compatibility still requires normal-mode retesting.
 The explicit diagnostic safe-mode option bypasses this check because Rhino suppresses plug-ins.
 
+The live guard probe used source `a95fb81` and installer SHA-256
+`fe9b4de831eba4bb48b298e2bfaf50246d182c19c43bf98e066fad39fcf1b589`.
+Launch returned the expected compatibility error, neither V-Ray nor RhinoCore entered the process,
+and Pro closed normally with exit code 0. This verifies the refusal, not normal embedded operation.
+
 Both first saves and subsequent saves use Rhino's `WriteFile` API with `UpdateDocumentPath`,
 `SuppressDialogBoxes` and `SuppressAllInput`, without a viewport thumbnail. Rhino manages file
 locking and backup/temp files. The code verifies that the output exists and that the active document
