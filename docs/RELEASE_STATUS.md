@@ -1,5 +1,35 @@
 # Public source candidate
 
+## 2026-10-17 save/shutdown investigation
+
+Stable installer publication is blocked. Windows recorded repeated ArcGIS Pro access violations
+(`0xc0000005`) naming `VRayForRhino.rhp_unloaded` version 6.10.0.0 after saving and closing an
+embedded Rhino session. A process disappearing is insufficient evidence of a clean shutdown;
+the harness now retains the process handle and requires exit code 0 with no matching crash event.
+Earlier October 17 runs that counted a crashed exit as clean do not establish release acceptance.
+A narrow startup check now refuses to load embedded Rhino when this exact V-Ray build is
+configured to autoload. It reads settings only and explains the required compatibility correction.
+
+New-file saves now use `RhinoDoc.WriteFile` with dialogs/input/preview-image rendering suppressed
+and `UpdateDocumentPath` enabled. A focused live probe successfully saved a new file and three
+modified versions. This addresses an interactive Save As stall; it does not establish that the
+native shutdown crash is fixed. Embedded Rhino uses a separate settings scheme, but V-Ray still
+autoloaded under that scheme. Two focused safe-mode hosts completed saving and exited with code 0;
+one also reopened the saved four-object document. Normal-mode document creation/reopen probes
+stalled. Diagnostic safe mode is not a supported replacement for normal-mode acceptance.
+See [save/shutdown diagnostics](SAVE_SHUTDOWN_DIAGNOSTICS.md).
+
+The About page, user installation guide, checked PowerShell installer, optional MCP launcher,
+`install.json` and `llms.txt` are prepared. Candidate metadata advertises no installer URL.
+The stable installer and gateway remain unpublished until two exact-package normal-mode lifecycle
+runs, companion coexistence, and full visual/keyboard/local-review acceptance pass.
+
+Portable checks for the diagnostic candidate: 327 Core tests, 17 offline MCP/release tests,
+30 synthetic fixture hashes, and a Release package build with 0 warnings and 0 errors.
+These checks do not certify embedded-host lifecycle behavior.
+
+## Earlier source preparation
+
 This tree starts with fresh Git history and reproducibly generated synthetic shapefiles. It has no
 parent commits, old GIS objects, private repository tags or copied release binaries. The original
 development repository remains private and separate.
