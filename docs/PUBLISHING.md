@@ -101,8 +101,8 @@ license notices and source snapshot before initializing the separate public repo
 ## Release sequence
 
 The reviewed source candidate and pending-status website can be published before licensed-host
-acceptance. Keep `site/release.json` set to `candidate`, publish no installer or gateway artifacts,
-and run the portable CI and Pages workflows. The following sequence is for a stable installer.
+acceptance. Keep `site/release.json` set to `candidate` and run the portable CI and Pages workflows.
+Installable experimental previews follow the separate policy below; they never enable stable downloads. The following sequence is for a stable installer.
 
 1. Complete the supported-scope acceptance checks and commit the final source.
 2. Export the clean committed source and review its provenance inventory.
@@ -112,3 +112,17 @@ and run the portable CI and Pages workflows. The following sequence is for a sta
 6. Set `site/release.json` to `published` with the actual `OWNER/NAME`, source commit and installer SHA-256, then commit that metadata.
 7. Enable GitHub Pages with Actions. A relevant `main` change triggers a build; the published release assets must verify before deployment.
 8. Check the site and artifact downloads without authentication, then submit the upstream project listing.
+
+## Experimental installer previews
+
+An explicitly requested experimental download may publish a frozen candidate installer and MCP
+gateway under a `v<version>-preview.<number>` tag pointing to their actual source commit. Mark the
+GitHub release as a prerelease and `latest=false`. Include exact hashes, the unchanged candidate
+manifest, license notices, checked installer script and honest known-issue/acceptance notes. Do not
+include a passing stable `VALIDATION.md`. Keep raw diagnostics and real project data private.
+
+Provide user and agent installation instructions through the local `-PackageDirectory` workflow;
+do not relabel the candidate manifest as published to bypass the stable installer. The website
+keeps stable `available=false` and uses separate `preview.json` metadata and clearly labeled preview
+links. Verify every public asset anonymously before announcing the download. The stable sequence
+and all its acceptance requirements still apply before publishing a stable release.

@@ -32,7 +32,7 @@ const gatewayDownloadUrl = repo ? `${repo}/releases/download/${tag}/${gatewayAss
 const published = release.status === 'published';
 const releasePanel = published
   ? `<div class="release-panel"><h2>Download ${tag}</h2><p>ArcGIS Pro 3.7 · Rhino 8 · Windows 11 x64</p><a class="button" href="${downloadUrl}">Download installer</a><p class="small"><a href="${releaseUrl}">Release notes</a> · <a href="${repo}/releases/download/${tag}/SHA256SUMS.txt">Checksums</a></p><p class="small">Optional MCP gateway for Node.js 22+: <a href="${gatewayDownloadUrl}">Download gateway ZIP</a>.</p><p class="small">Unsigned add-in. Your organization's add-in policy applies.</p><details><summary>Verify the download</summary><code class="hash">${release.sha256}</code></details></div>`
-  : `<div class="release-panel"><h2>Version ${release.version} — candidate</h2><p>This is a release candidate. Runtime validation is pending; this page does not certify ArcGIS Pro and embedded Rhino compatibility.</p><p class="small">No installer or gateway download is available. Requires ArcGIS Pro 3.7, Rhino 8 and Windows 11 x64.</p></div>`;
+  : `<div class="release-panel"><h2>Version ${release.version} — candidate</h2><p>This is a release candidate. Runtime validation is pending; this page does not certify ArcGIS Pro and embedded Rhino compatibility.</p><p class="small">No stable installer or gateway download is available. See Releases for the experimental preview. Requires ArcGIS Pro 3.7, Rhino 8 and Windows 11 x64.</p></div>`;
 const pages = [
   ['index.html', 'Overview', 'Rhino.Inside for ArcGIS Pro'],
   ['install.html', 'Install', 'Install Rhino.Inside-ArcGIS'],
@@ -56,10 +56,11 @@ for (const [file, label, title] of pages) {
 }
 await copyFile(path.join(root, 'style.css'), path.join(root, 'dist', 'style.css'));
 await writeFile(path.join(root, 'dist', '.nojekyll'), '');
-// A compact entry point for agents; unavailable candidates never advertise installer URLs.
+await copyFile(path.join(root, 'preview.json'), path.join(root, 'dist', 'preview.json'));
+// Stable availability stays separate from the explicitly experimental preview.
 await writeFile(path.join(root, 'dist', 'install.json'), JSON.stringify({
   name: 'Rhino.Inside-ArcGIS', version: release.version, status: release.status,
-  available: published, repository: repo,
+  available: published, repository: repo, experimentalPreview: 'preview.json',
   requirements: { os: 'Windows 11 x64 build 22621+', arcgisPro: '3.7', rhino: '8', node: '22+ for optional MCP only', licensedApplicationsRequired: true },
   installScript: published ? `https://raw.githubusercontent.com/${targetRepository}/${tag}/tools/Install-RhinoInsideArcGIS.ps1` : null,
   installer: published ? { url: downloadUrl, sha256: release.sha256 } : null,
@@ -68,7 +69,7 @@ await writeFile(path.join(root, 'dist', 'install.json'), JSON.stringify({
   instructions: `${repo}/blob/main/docs/AGENT_INSTALL.md`,
   requiresProClosedForInstall: true, signed: false, writesRequireLocalReview: true
 }, null, 2) + '\n');
-await writeFile(path.join(root, 'dist', 'llms.txt'), `# Rhino.Inside-ArcGIS\n\nRhino 8 inside ArcGIS Pro 3.7 on Windows 11 x64.\n\n- Status: ${release.status} ${tag}\n- [Machine-readable install metadata](install.json)\n- [Installation for users and agents](install.html)\n- [Agent installation guide](${repo}/blob/main/docs/AGENT_INSTALL.md)\n- [MCP tools and local-review policy](${repo}/blob/main/docs/MCP_CONTROL.md)\n- [About](about.html)\n\nUse a named stable release, verify hashes, and close Pro before installation. Both applications need licenses. The add-in is unsigned. Node.js 22+ is required only for optional MCP. Read-only inspection is available; agents cannot approve their own GIS writes.\n`);
+await writeFile(path.join(root, 'dist', 'llms.txt'), `# Rhino.Inside-ArcGIS\n\nRhino 8 inside ArcGIS Pro 3.7 on Windows 11 x64.\n\n- Status: ${release.status} ${tag}\n- [Machine-readable install metadata](install.json)\n- [Installation for users and agents](install.html)\n- [Agent installation guide](${repo}/blob/main/docs/AGENT_INSTALL.md)\n- [Experimental preview metadata](preview.json)\n- [Experimental preview installation and known issues](${repo}/blob/main/docs/PREVIEW_INSTALL.md)\n- [MCP tools and local-review policy](${repo}/blob/main/docs/MCP_CONTROL.md)\n- [About](about.html)\n\nChoose a named stable release when available. The experimental preview requires explicit opt-in and has known shutdown issues. Verify hashes and close Pro before installation. Both applications need licenses. The add-in is unsigned. Node.js 22+ is required only for optional MCP. Read-only inspection is available; agents cannot approve their own GIS writes.\n`);
 // A project-site deployment runs below the repository path. Relative URLs must resolve there.
 for (const [file, html] of documents) {
   for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {

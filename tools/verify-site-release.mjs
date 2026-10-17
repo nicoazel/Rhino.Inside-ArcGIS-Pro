@@ -162,7 +162,7 @@ export async function main() {
   }
   const repository = resolveSiteRepository(metadata.repository, process.env.SITE_REPOSITORY);
   if (metadata.status === 'candidate') {
-    console.log(`Candidate v${metadata.version}: Pages may deploy with an explicit pending-validation label; no release download is enabled.`);
+    console.log(`Candidate v${metadata.version}: Pages may deploy with an explicit pending-validation label; no stable release download is enabled.`);
     return;
   }
   if (metadata.repository !== repository) throw new Error('Published site metadata must pin the configured public repository.');

@@ -4,7 +4,10 @@
 
 Stable installer publication remains blocked. The public source, About page, user/agent guides,
 checked PowerShell installer, optional launcher, `install.json` and `llms.txt` are available.
-Candidate metadata advertises no installer or gateway download URL.
+Stable candidate metadata advertises no stable installer or gateway download URL. An explicitly
+experimental [v1.3.0-preview.1 download](PREVIEW_INSTALL.md) now provides the exact frozen binaries
+with checksums, installation instructions and the known save-on-close failure. It is not a stable
+release and does not certify the missing acceptance gates.
 
 The frozen diagnostic package uses source `5dd601f97165ca8a23a3ece609de5fa0091c47dd` and installer SHA-256
 `f94396760c5081c09c3af36161a279474d60a85bd275f4827fde9850c25e5805`. Its completed checks are:

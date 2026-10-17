@@ -4,7 +4,7 @@ Use Windows 11 x64 (build 22621+), licensed ArcGIS Pro 3.7 and licensed Rhino 8.
 once to finish licensing. Installing the add-in needs neither Visual Studio nor the .NET SDK.
 Optional MCP control needs Node.js 22+; ordinary dockpane use does not.
 
-> Current availability: this is a source candidate. Stable v1.3.0 installer and gateway assets are not published yet. The commands below become usable after that stable release passes acceptance; check [release status](RELEASE_STATUS.md) first.
+> Current availability: [experimental preview downloads and setup](PREVIEW_INSTALL.md) are available. Stable v1.3.0 remains unpublished pending the save-on-close fix and acceptance. The stable-tag commands below apply only after that stable release.
 
 ## Install a pinned release
 
