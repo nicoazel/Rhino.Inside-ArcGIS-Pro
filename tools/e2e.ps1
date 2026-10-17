@@ -1447,8 +1447,9 @@ else {
 
         $script:DismissLog.Clear()
         $closed = Close-Pro -SaveProject $true -RhinoWork Discard
-        Check 'ArcGIS Pro closes cleanly through the add-in' ($closed.Exited -and -not $closed.Forced) `
-            ("exited={0} in {1}s {2}" -f $closed.Exited, $closed.Seconds, $closed.Note) | Out-Null
+        Check 'ArcGIS Pro closes cleanly through the add-in' ($closed.Clean -and -not $closed.Forced) `
+            ("exited={0}; code={1} in {2}s {3}" -f $closed.Exited, $closed.ExitCode, $closed.Seconds, $closed.Note) | Out-Null
+        if (-not $closed.Clean) { throw "Release blocked by abnormal shutdown: $($closed.Note)" }
 
         function Restart-Session {
             $script:DismissLog.Clear()
@@ -1548,9 +1549,10 @@ else {
         $pending = Send-Bridge preview @{ arcgisLayer = $carryLayer; rhinoLayer = $carryRhino } -TimeoutSec 900
         $closed2 = Close-Pro -SaveProject $true -RhinoWork Save
         Check 'closing with unsaved Rhino work saves it and still exits cleanly' `
-            ($closed2.Exited -and -not $closed2.Forced -and $pending.changed -eq ($base.changed + 1)) `
+            ($closed2.Clean -and -not $closed2.Forced -and $pending.changed -eq ($base.changed + 1)) `
             ("exited={0} in {1}s; pending: {2}" -f $closed2.Exited, $closed2.Seconds, (Describe-Report $pending)) | Out-Null
 
+        if (-not $closed2.Clean) { throw "Release blocked by abnormal shutdown: $($closed2.Note)" }
         Restart-Session
         $recovery2 = @(Get-RecoveryPrompts)
         $carried = Send-Bridge preview @{ arcgisLayer = $carryLayer; rhinoLayer = $carryRhino } -TimeoutSec 900
@@ -1615,8 +1617,8 @@ else {
 if (-not $SkipStart -and -not $LeavePro) {
     $final = Close-Pro -SaveProject $true -RhinoWork Discard
     $script:CurrentFixture = '(shutdown)'
-    Check 'the run ends with a clean ArcGIS Pro shutdown' ($final.Exited -and -not $final.Forced) `
-        ("exited={0} in {1}s {2}" -f $final.Exited, $final.Seconds, $final.Note) | Out-Null
+    Check 'the run ends with a clean ArcGIS Pro shutdown' ($final.Clean -and -not $final.Forced) `
+        ("exited={0}; code={1} in {2}s {3}" -f $final.Exited, $final.ExitCode, $final.Seconds, $final.Note) | Out-Null
 }
 
 # ---------------------------------------------------------------- summary

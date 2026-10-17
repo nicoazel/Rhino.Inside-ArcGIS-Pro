@@ -30,6 +30,9 @@ namespace RhinoInside.ArcGISPro
     internal static class RhinoHost
     {
         internal const string WindowStyleEnvironmentVariable = "RHINOINSIDE_ARCGIS_WINDOW_STYLE";
+        // Keep the embedded host's render/UI/plug-in preferences separate from standalone Rhino.
+        // Rhino.Inside.Revit uses the same documented /scheme startup boundary.
+        internal const string SettingsScheme = "Inside-ArcGISPro-3.7";
 
         static object _core;
         static string _netcoreDirectory;
@@ -168,7 +171,7 @@ namespace RhinoInside.ArcGISPro
             var windowStyle = GetConfiguredWindowStyle();
             RhinoWindowStyle = windowStyle.ToString();
             _core = new Rhino.Runtime.InProcess.RhinoCore(
-                new[] { "/nosplash" },
+                new[] { "/nosplash", "/scheme=" + SettingsScheme },
                 windowStyle);
 
             LoadedRhinoCommon = typeof(Rhino.RhinoApp).Assembly.Location;

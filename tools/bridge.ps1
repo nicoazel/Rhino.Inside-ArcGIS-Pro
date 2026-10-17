@@ -72,6 +72,25 @@ function Get-TestProProcessId {
     return 0
 }
 
+function Get-ProCrashEvents {
+    param([int]$ProcessId, [datetime]$Since)
+    # Use structured event fields, not localized message text. PID and start time exclude
+    # unrelated sessions and PID reuse. Raw crash dumps and paths remain private.
+    $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Id = 1000; StartTime = $Since } -ErrorAction SilentlyContinue)
+    foreach ($event in $events) {
+        [xml]$xml = $event.ToXml()
+        $data = @{}
+        foreach ($field in $xml.Event.EventData.Data) { $data[[string]$field.Name] = [string]$field.'#text' }
+        $rawPid = $data['ProcessId']
+        if (-not $rawPid -or $data['AppName'] -ine 'ArcGISPro.exe') { continue }
+        try { $eventPid = if ($rawPid.StartsWith('0x')) { [Convert]::ToInt32($rawPid.Substring(2), 16) } else { [int]$rawPid } } catch { continue }
+        if ($eventPid -eq $ProcessId) {
+            [pscustomobject]@{ ProcessId = $eventPid; TimeUtc = $event.TimeCreated.ToUniversalTime().ToString('o');
+                Module = $data['ModuleName']; ExceptionCode = $data['ExceptionCode']; RecordId = $event.RecordId }
+        }
+    }
+}
+
 function Close-Pro {
     <#
     .SYNOPSIS
@@ -88,22 +107,36 @@ function Close-Pro {
         [string]$Root = $script:BridgeRoot
     )
     $target = Get-TestProProcessId -Root $Root
-    if (-not $target) { return [pscustomobject]@{ Exited = $true; Seconds = 0; Forced = $false; Note = 'not running' } }
+    if (-not $target) { return [pscustomobject]@{ Exited = $true; Clean = $false; ExitCode = $null; Seconds = 0; Forced = $false; Note = 'not running; normal exit was not observed' } }
+
+    $ownedProcess = Get-Process -Id $target -ErrorAction Stop
+    $startedAt = $ownedProcess.StartTime
+    # Retain a real process handle before requesting close. Looking up a vanished PID cannot
+    # distinguish a normal shutdown from an access violation during plug-in unload.
+    $null = $ownedProcess.Handle
 
     $sw = [Diagnostics.Stopwatch]::StartNew()
     try {
         Send-Bridge unsavedpolicy @{ value = $RhinoWork } -Root $Root -TimeoutSec 30 | Out-Null
         Send-Bridge closepro @{ saveProject = $SaveProject } -Root $Root -TimeoutSec 300 | Out-Null
     }
-    catch { return [pscustomobject]@{ Exited = $false; Seconds = 0; Forced = $false; Note = "bridge: $($_.Exception.Message)" } }
+    catch { return [pscustomobject]@{ Exited = $false; Clean = $false; ExitCode = $null; Seconds = 0; Forced = $false; Note = "bridge: $($_.Exception.Message)" } }
 
     while ((Get-Process -Id $target -ErrorAction SilentlyContinue) -and $sw.Elapsed.TotalSeconds -lt $GraceSec) {
         Dismiss-Dialogs -ProcessId $target | Out-Null
         Start-Sleep -Milliseconds 500
     }
     $exited = -not (Get-Process -Id $target -ErrorAction SilentlyContinue)
+    $exitCode = $null
+    $crashes = @()
     $note = ''
     if ($exited) {
+        $ownedProcess.WaitForExit()
+        $exitCode = $ownedProcess.ExitCode
+        $crashes = @(Get-ProCrashEvents -ProcessId $target -Since $startedAt)
+        if ($exitCode -ne 0 -or $crashes.Count) {
+            $note = "abnormal shutdown: exit code $exitCode" + $(if ($crashes.Count) { '; fault modules: ' + (($crashes | ForEach-Object Module) -join ', ') })
+        }
         Remove-Item (Join-Path $Root 'process.id') -ErrorAction SilentlyContinue
         $script:TestProProcessId = 0
     }
@@ -115,7 +148,8 @@ function Close-Pro {
             $note = 'still open: ' + ($open -join '; ') + ' | last bridge lines: ' + ((Get-BridgeLog -Root $Root -Tail 4) -join ' / ')
         } catch { $note = 'still running; could not list its windows' }
     }
-    return [pscustomobject]@{ Exited = $exited; Seconds = [int]$sw.Elapsed.TotalSeconds; Forced = $false; Note = $note }
+    return [pscustomobject]@{ Exited = $exited; Clean = ($exited -and $exitCode -eq 0 -and $crashes.Count -eq 0);
+        ExitCode = $exitCode; CrashEvents = $crashes; Seconds = [int]$sw.Elapsed.TotalSeconds; Forced = $false; Note = $note }
 }
 
 function Stop-Pro {
