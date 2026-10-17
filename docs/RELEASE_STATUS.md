@@ -32,7 +32,7 @@ Both processes' four loaded add-in assemblies matched the frozen installer.
 
 That attempt **failed** its next save-on-close check: pending Rhino work entered native
 `RhinoDoc.WriteFile` inside the application-closing handler and did not complete within 120 seconds.
-A private managed stack confirmed that call. This is a remaining release blocker; V-Ray removal
+A private managed stack confirmed that call. The attempt ended with 312 checks passed and 3 failed (save-on-close, scenario completion and final clean shutdown). This is a remaining release blocker; V-Ray removal
 and the earlier successful saves do not establish a complete lifecycle. The second independent
 matrix has not been run while this reproducible gate is unresolved.
 
