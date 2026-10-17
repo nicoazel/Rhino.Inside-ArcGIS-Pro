@@ -32,7 +32,7 @@ namespace RhinoInside.ArcGISPro
         internal const string WindowStyleEnvironmentVariable = "RHINOINSIDE_ARCGIS_WINDOW_STYLE";
         // Keep the embedded host's render/UI/plug-in preferences separate from standalone Rhino.
         // Rhino.Inside.Revit uses the same documented /scheme startup boundary.
-        internal const string SettingsScheme = "Inside-ArcGISPro-3.7";
+        internal const string SettingsScheme = "Default";
         internal const string SafeModeEnvironmentVariable = "RHINOINSIDE_ARCGIS_SAFE_MODE";
         internal static bool SafeMode { get; private set; }
 
@@ -210,7 +210,7 @@ namespace RhinoInside.ArcGISPro
             var windowStyle = GetConfiguredWindowStyle();
             RhinoWindowStyle = windowStyle.ToString();
             SafeMode = string.Equals(Environment.GetEnvironmentVariable(SafeModeEnvironmentVariable), "1", StringComparison.Ordinal);
-            var arguments = new List<string> { "/nosplash", "/scheme=" + SettingsScheme };
+            var arguments = new List<string> { "/nosplash" };
             // Explicit diagnostic mode only. Safe mode suppresses third-party plug-ins and may
             // limit display/Grasshopper; never silently switch a normal user into this mode.
             if (SafeMode) arguments.Add("/safemode");
