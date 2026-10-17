@@ -43,6 +43,8 @@ namespace RhinoInside.ArcGISPro
         // resolver setup to be repeated on the next attempt -- otherwise the retry reports
         // "Rhino.Inside is already initialized" and hides the failure that actually matters.
         static bool _resolverInitialized;
+        static bool _pumpingMessages;
+        static bool _idlePending = true;
 
         internal static bool IsStarted => _core != null;
 
@@ -244,7 +246,35 @@ namespace RhinoInside.ArcGISPro
             Rhino.RhinoDoc.DeleteRhinoObject += (s, e) => ObjectsChanged?.Invoke(null, EventArgs.Empty);
             Rhino.RhinoDoc.UserStringChanged += (s, e) => ObjectsChanged?.Invoke(null, EventArgs.Empty);
 
+            System.Windows.Interop.ComponentDispatcher.ThreadIdle += PumpModelessMessages;
             Started?.Invoke(null, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Service Rhino's modeless message loop when WPF is idle. Without this integration,
+        /// native Rhino messages can starve the host dispatcher after document/view changes.
+        /// Uses McNeel's DoIdle/DoEvents pattern with a reentrancy guard and a bounded drain so
+        /// Rhino work cannot monopolize the ArcGIS Pro UI thread.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        static void PumpModelessMessages(object sender, EventArgs args)
+        {
+            if (_pumpingMessages || !(_core is Rhino.Runtime.InProcess.RhinoCore core)) return;
+            _pumpingMessages = true;
+            try
+            {
+                for (int remaining = 16; remaining > 0 && ReferenceEquals(_core, core); --remaining)
+                {
+                    if (_idlePending) _idlePending = core.DoIdle();
+                    if (!ReferenceEquals(_core, core)) break;
+                    if (!core.DoEvents())
+                    {
+                        _idlePending = true;
+                        break;
+                    }
+                }
+            }
+            finally { _pumpingMessages = false; }
         }
 
         /// <summary>
@@ -531,6 +561,8 @@ namespace RhinoInside.ArcGISPro
         [MethodImpl(MethodImplOptions.NoInlining)]
         static void ShutdownCore()
         {
+            System.Windows.Interop.ComponentDispatcher.ThreadIdle -= PumpModelessMessages;
+            _idlePending = true;
             var core = _core as IDisposable;
             try
             {
