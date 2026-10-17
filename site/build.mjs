@@ -56,6 +56,19 @@ for (const [file, label, title] of pages) {
 }
 await copyFile(path.join(root, 'style.css'), path.join(root, 'dist', 'style.css'));
 await writeFile(path.join(root, 'dist', '.nojekyll'), '');
+// A compact entry point for agents; unavailable candidates never advertise installer URLs.
+await writeFile(path.join(root, 'dist', 'install.json'), JSON.stringify({
+  name: 'Rhino.Inside-ArcGIS', version: release.version, status: release.status,
+  available: published, repository: repo,
+  requirements: { os: 'Windows 11 x64 build 22621+', arcgisPro: '3.7', rhino: '8', node: '22+ for optional MCP only', licensedApplicationsRequired: true },
+  installScript: published ? `https://raw.githubusercontent.com/${targetRepository}/${tag}/tools/Install-RhinoInsideArcGIS.ps1` : null,
+  installer: published ? { url: downloadUrl, sha256: release.sha256 } : null,
+  mcpGateway: published ? gatewayDownloadUrl : null,
+  sourceCommit: published ? release.sourceCommit : null,
+  instructions: `${repo}/blob/main/docs/AGENT_INSTALL.md`,
+  requiresProClosedForInstall: true, signed: false, writesRequireLocalReview: true
+}, null, 2) + '\n');
+await writeFile(path.join(root, 'dist', 'llms.txt'), `# Rhino.Inside-ArcGIS\n\nRhino 8 inside ArcGIS Pro 3.7 on Windows 11 x64.\n\n- Status: ${release.status} ${tag}\n- [Machine-readable install metadata](install.json)\n- [Installation for users and agents](install.html)\n- [Agent installation guide](${repo}/blob/main/docs/AGENT_INSTALL.md)\n- [MCP tools and local-review policy](${repo}/blob/main/docs/MCP_CONTROL.md)\n- [About](about.html)\n\nUse a named stable release, verify hashes, and close Pro before installation. Both applications need licenses. The add-in is unsigned. Node.js 22+ is required only for optional MCP. Read-only inspection is available; agents cannot approve their own GIS writes.\n`);
 // A project-site deployment runs below the repository path. Relative URLs must resolve there.
 for (const [file, html] of documents) {
   for (const match of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
