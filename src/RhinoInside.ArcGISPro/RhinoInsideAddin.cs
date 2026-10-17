@@ -129,9 +129,8 @@ namespace RhinoInside.ArcGISPro
                 SyncCoordinator.CancelShutdown();
                 return false;
             }
-            var ready = SyncCoordinator.IsShutdownRequested;
-            TestBridge.Log("unload: shutdown reservation=" + ready);
-            return ready;
+            TestBridge.Log("unload: shutdown reservation=" + SyncCoordinator.IsShutdownRequested);
+            return SyncCoordinator.IsShutdownRequested;
         }
 
         protected override Task OnReadSettingsAsync(ModuleSettingsReader settings)
