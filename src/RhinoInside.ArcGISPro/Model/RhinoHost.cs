@@ -30,8 +30,7 @@ namespace RhinoInside.ArcGISPro
     internal static class RhinoHost
     {
         internal const string WindowStyleEnvironmentVariable = "RHINOINSIDE_ARCGIS_WINDOW_STYLE";
-        // Keep the embedded host's render/UI/plug-in preferences separate from standalone Rhino.
-        // Rhino.Inside.Revit uses the same documented /scheme startup boundary.
+        // Use the established profile: the experimental isolated profile stalled WPF dispatch.
         internal const string SettingsScheme = "Default";
         internal const string SafeModeEnvironmentVariable = "RHINOINSIDE_ARCGIS_SAFE_MODE";
         internal static bool SafeMode { get; private set; }

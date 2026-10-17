@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using ArcGIS.Desktop.Framework;
@@ -129,7 +129,9 @@ namespace RhinoInside.ArcGISPro
                 SyncCoordinator.CancelShutdown();
                 return false;
             }
-            return SyncCoordinator.IsShutdownRequested;
+            var ready = SyncCoordinator.IsShutdownRequested;
+            TestBridge.Log("unload: shutdown reservation=" + ready);
+            return ready;
         }
 
         protected override Task OnReadSettingsAsync(ModuleSettingsReader settings)
