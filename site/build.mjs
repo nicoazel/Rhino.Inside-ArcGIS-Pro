@@ -37,7 +37,8 @@ const pages = [
   ['index.html', 'Overview', 'Rhino.Inside for ArcGIS Pro'],
   ['install.html', 'Install', 'Install Rhino.Inside-ArcGIS'],
   ['guide.html', 'User guide', 'User guide — Rhino.Inside-ArcGIS'],
-  ['releases.html', 'Releases', 'Releases — Rhino.Inside-ArcGIS']
+  ['releases.html', 'Releases', 'Releases — Rhino.Inside-ArcGIS'],
+  ['about.html', 'About', 'About — Rhino.Inside-ArcGIS']
 ];
 await mkdir(path.join(root, 'dist'), { recursive: true });
 const documents = new Map();

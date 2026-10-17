@@ -13,6 +13,18 @@ The [public website](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/) is gen
 [installation and release preparation](docs/PUBLISHING.md) and
 [acknowledgements](ACKNOWLEDGEMENTS.md). This repository is licensed under [MIT](LICENSE).
 
+## Install
+
+Start at the [installation page](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/install.html).
+Users can download the versioned `.esriAddinX` and double-click it with Pro closed. Agents can
+use the [pinned PowerShell installer](docs/AGENT_INSTALL.md), which verifies the package and prints
+JSON; `-WithMcp` adds the optional gateway and a launcher that prints an exact-PID client config.
+The download panel shows whether a stable installer is available. Source prereleases are not installers.
+
+Requirements: Windows 11 x64, licensed ArcGIS Pro 3.7 and Rhino 8. No SDK is needed to install.
+Node.js 22+ is needed only for MCP control. Read [About](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/about.html)
+for the project's origins and acknowledgements.
+
 ## Supported feature set
 
 The source candidate also includes optional [embedded Rhino MCP control](docs/MCP_CONTROL.md):

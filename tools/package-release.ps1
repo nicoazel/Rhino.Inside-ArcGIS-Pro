@@ -63,7 +63,7 @@ try {
     $hash = (Get-FileHash -LiteralPath (Join-Path $OutputDirectory $asset) -Algorithm SHA256).Hash.ToLowerInvariant()
     $gatewayRoot = Join-Path $OutputDirectory 'mcp-gateway'
     New-Item -ItemType Directory -Path $gatewayRoot | Out-Null
-    Copy-Item -LiteralPath (Join-Path $repo 'tools/mcp/server.mjs'),(Join-Path $repo 'tools/mcp/protocol.mjs'),(Join-Path $repo 'docs/MCP_CONTROL.md'),(Join-Path $repo 'LICENSE') -Destination $gatewayRoot
+    Copy-Item -LiteralPath (Join-Path $repo 'tools/mcp/server.mjs'),(Join-Path $repo 'tools/mcp/protocol.mjs'),(Join-Path $repo 'tools/mcp/Start-RhinoInsideArcGIS.ps1'),(Join-Path $repo 'docs/MCP_CONTROL.md'),(Join-Path $repo 'LICENSE') -Destination $gatewayRoot
     $gatewayAsset = "RhinoInside-Mcp-v$version.zip"
     [IO.Compression.ZipFile]::CreateFromDirectory($gatewayRoot, (Join-Path $OutputDirectory $gatewayAsset))
     $gatewayHash = (Get-FileHash -LiteralPath (Join-Path $OutputDirectory $gatewayAsset) -Algorithm SHA256).Hash.ToLowerInvariant()
