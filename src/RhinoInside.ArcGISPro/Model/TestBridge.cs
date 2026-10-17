@@ -111,6 +111,7 @@ namespace RhinoInside.ArcGISPro
                         rhinoVersion = RhinoHost.RhinoVersion,
                         rhinoWindowStyle = RhinoHost.RhinoWindowStyle,
                         rhinoSettingsScheme = RhinoHost.SettingsScheme,
+                        rhinoSafeMode = RhinoHost.SafeMode,
                         rhinoCommon = RhinoHost.LoadedRhinoCommon,
                         document = Describe(RhinoHost.GetActiveDocument()),
                         anchor = Describe(RhinoHost.GetEarthAnchor())

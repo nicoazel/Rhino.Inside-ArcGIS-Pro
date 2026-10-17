@@ -33,6 +33,8 @@ namespace RhinoInside.ArcGISPro
         // Keep the embedded host's render/UI/plug-in preferences separate from standalone Rhino.
         // Rhino.Inside.Revit uses the same documented /scheme startup boundary.
         internal const string SettingsScheme = "Inside-ArcGISPro-3.7";
+        internal const string SafeModeEnvironmentVariable = "RHINOINSIDE_ARCGIS_SAFE_MODE";
+        internal static bool SafeMode { get; private set; }
 
         static object _core;
         static string _netcoreDirectory;
@@ -170,8 +172,13 @@ namespace RhinoInside.ArcGISPro
         {
             var windowStyle = GetConfiguredWindowStyle();
             RhinoWindowStyle = windowStyle.ToString();
+            SafeMode = string.Equals(Environment.GetEnvironmentVariable(SafeModeEnvironmentVariable), "1", StringComparison.Ordinal);
+            var arguments = new List<string> { "/nosplash", "/scheme=" + SettingsScheme };
+            // Explicit diagnostic mode only. Safe mode suppresses third-party plug-ins and may
+            // limit display/Grasshopper; never silently switch a normal user into this mode.
+            if (SafeMode) arguments.Add("/safemode");
             _core = new Rhino.Runtime.InProcess.RhinoCore(
-                new[] { "/nosplash", "/scheme=" + SettingsScheme },
+                arguments.ToArray(),
                 windowStyle);
 
             LoadedRhinoCommon = typeof(Rhino.RhinoApp).Assembly.Location;
@@ -384,68 +391,31 @@ namespace RhinoInside.ArcGISPro
         }
 
         /// <summary>
-        /// Saves the document to a path and makes that path the document's own, the way File >
-        /// Save As does.
+        /// Writes the complete document without interactive commands or preview-image rendering,
+        /// and makes the saved path the document's current path, including on its first save.
         /// </summary>
-        /// <remarks>
-        /// <see cref="Rhino.RhinoDoc.SaveAs(string)"/> only writes a copy: the document keeps its old
-        /// path (or stays Untitled), so the project would remember the wrong file -- or none -- and
-        /// the next session would reopen stale links. Overwriting the document's own file through
-        /// SaveAs was also refused outright during Pro's shutdown. Its own path therefore goes
-        /// through <see cref="Rhino.RhinoDoc.Save"/>, and a new path through the SaveAs command,
-        /// which re-homes the document.
-        /// </remarks>
         static void SaveDocumentTo(Rhino.RhinoDoc doc, string path)
         {
             var target = Path.GetFullPath(path);
-            var current = string.IsNullOrWhiteSpace(doc.Path) ? null : Path.GetFullPath(doc.Path);
-            if (current != null && string.Equals(current, target, StringComparison.OrdinalIgnoreCase))
+            // WriteFile updates both a new document's path and an existing document's file.
+            // Avoid RunScript/SaveAs: interactive command completion and viewport thumbnails can
+            // wait on UI while the host is saving or shutting down. Rhino handles file locking,
+            // temporary files and backups; there is no reason to delete the destination first.
+            TestBridge.Log("save: WriteFile " + target);
+            var options = new Rhino.FileIO.FileWriteOptions
             {
-                // Not RhinoDoc.Save: during ArcGIS Pro's shutdown it intermittently never returned
-                // (about one close in three in the acceptance matrix), stuck inside Rhino. The
-                // same write without the viewport preview image and with every prompt suppressed
-                // does not wait on UI that Pro is tearing down; the file loses only its thumbnail.
-                TestBridge.Log("save: WriteFile " + target);
-                var options = new Rhino.FileIO.FileWriteOptions
-                {
-                    IncludePreviewImage = false,
-                    SuppressDialogBoxes = true,
-                    SuppressAllInput = true,
-                    UpdateDocumentPath = true
-                };
-                if (!doc.WriteFile(target, options)) throw new InvalidOperationException($"Rhino could not save '{target}'.");
-                doc.Modified = false;
-                TestBridge.Log("save: done");
-                return;
-            }
-
-            // The command asks before replacing a file; the caller already decided (a Save dialog
-            // confirms overwrites), so the old file is set aside and restored if the save fails.
-            string backup = null;
-            if (File.Exists(target))
-            {
-                backup = target + ".rhinoinside-bak";
-                File.Copy(target, backup, true);
-                File.Delete(target);
-            }
-            try
-            {
-                TestBridge.Log("save: -SaveAs " + target);
-                Rhino.RhinoApp.RunScript(doc.RuntimeSerialNumber, "_-SaveAs \"" + target + "\" _Enter", false);
-                TestBridge.Log("save: -SaveAs returned");
-                var now = string.IsNullOrWhiteSpace(doc.Path) ? null : Path.GetFullPath(doc.Path);
-                if (!File.Exists(target) || !string.Equals(now, target, StringComparison.OrdinalIgnoreCase))
-                {
-                    // The command was unavailable (another command running): still write the file.
-                    if (!doc.SaveAs(target)) throw new InvalidOperationException($"Rhino could not save '{target}'.");
-                }
-                if (backup != null) File.Delete(backup);
-            }
-            catch
-            {
-                if (backup != null && !File.Exists(target)) File.Move(backup, target);
-                throw;
-            }
+                IncludePreviewImage = false,
+                SuppressDialogBoxes = true,
+                SuppressAllInput = true,
+                UpdateDocumentPath = true
+            };
+            if (!doc.WriteFile(target, options))
+                throw new InvalidOperationException($"Rhino could not save '{target}'.");
+            var savedPath = string.IsNullOrWhiteSpace(doc.Path) ? null : Path.GetFullPath(doc.Path);
+            if (!File.Exists(target) || !string.Equals(savedPath, target, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Rhino did not adopt the saved document path '{target}'.");
+            doc.Modified = false;
+            TestBridge.Log("save: done");
         }
 
         static string AskForSavePath(Rhino.RhinoDoc doc)
