@@ -51,6 +51,32 @@ adopted the saved path. It no longer deletes the destination or drives an intera
 closing, reading its exit code and querying matching Windows crash events. E2E lifecycle assertions
 require `Clean`, not merely `Exited`.
 
+## Follow-up after removal
+
+V-Ray for Rhino was uninstalled on the validation machine. Six orphaned Rhino 7/8 registrations
+were backed up and removed because their plug-in DLLs no longer existed. Reverting the experimental
+isolated settings scheme to the established default profile cleared the document-operation stall:
+layer add, pull, save and reopen completed in approximately 0.3-1.1 s in the focused probe, preserving
+all seven objects. An experimental modeless message pump did not clear that stall and was reverted.
+The separate 2D fixture elevation callback delay was corrected with an explicit scene-only guard.
+
+The subsequent exact-package core matrix passed 298 checks, the live MCP read-only/safety suite
+passed 21 cases, and the 1k/10k/100k benchmark passed all 60 recorded rows. The benchmark host then
+closed normally with exit code 0 in eight seconds and no matching crash event.
+
+A fresh full lifecycle attempt closed its initial process normally with exit code 0 in 113 seconds.
+The next process restored the document, seven bound links, earth anchor, identical previews and
+edited values on both sides. Exact installer assembly hashes matched in both processes.
+
+Its next close, which saves pending Rhino work, **failed** the 120-second limit. The closing handler
+logged entry into `RhinoDoc.WriteFile` without completion, and a private managed stack confirmed
+that native call beneath `ResolveUnsavedWorkCore` and `OnApplicationClosing`. Ordinary earlier
+saves completed quickly. This remaining save-during-shutdown stall needs diagnosis and a real fix;
+the cause is not established. The full lifecycle attempt did not pass, and the second independent
+matrix remains pending. Actual recovery-dialog, keyboard and local MCP approval inspection also
+remain pending while the interactive-control runtime cannot initialize. See
+[current status](RELEASE_STATUS.md) and [measured performance](PERFORMANCE.md).
+
 ## Diagnostic isolation
 
 For a disposable test project only, a PowerShell-launched host can opt into Rhino's documented

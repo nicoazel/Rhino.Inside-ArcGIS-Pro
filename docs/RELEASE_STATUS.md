@@ -1,32 +1,50 @@
 # Public source candidate
 
-## 2026-10-17 save/shutdown investigation
+## 2026-10-17 current validation
 
-Stable installer publication is blocked. Windows recorded repeated ArcGIS Pro access violations
-(`0xc0000005`) naming `VRayForRhino.rhp_unloaded` version 6.10.0.0 after saving and closing an
-embedded Rhino session. A process disappearing is insufficient evidence of a clean shutdown;
-the harness now retains the process handle and requires exit code 0 with no matching crash event.
-Earlier October 17 runs that counted a crashed exit as clean do not establish release acceptance.
-A narrow startup check now refuses to load embedded Rhino when this exact V-Ray build is
-configured to autoload. It reads settings only and explains the required compatibility correction.
+Stable installer publication remains blocked. The public source, About page, user/agent guides,
+checked PowerShell installer, optional launcher, `install.json` and `llms.txt` are available.
+Candidate metadata advertises no installer or gateway download URL.
 
-New-file saves now use `RhinoDoc.WriteFile` with dialogs/input/preview-image rendering suppressed
-and `UpdateDocumentPath` enabled. A focused live probe successfully saved a new file and three
-modified versions. This addresses an interactive Save As stall; it does not establish that the
-native shutdown crash is fixed. Embedded Rhino uses a separate settings scheme, but V-Ray still
-autoloaded under that scheme. Two focused safe-mode hosts completed saving and exited with code 0;
-one also reopened the saved four-object document. Normal-mode document creation/reopen probes
-stalled. Diagnostic safe mode is not a supported replacement for normal-mode acceptance.
-See [save/shutdown diagnostics](SAVE_SHUTDOWN_DIAGNOSTICS.md).
+The frozen diagnostic package uses source `5dd601f97165ca8a23a3ece609de5fa0091c47dd` and installer SHA-256
+`f94396760c5081c09c3af36161a279474d60a85bd275f4827fde9850c25e5805`. Its completed checks are:
 
-The About page, user installation guide, checked PowerShell installer, optional MCP launcher,
-`install.json` and `llms.txt` are prepared. Candidate metadata advertises no installer URL.
-The stable installer and gateway remain unpublished until two exact-package normal-mode lifecycle
-runs, companion coexistence, and full visual/keyboard/local-review acceptance pass.
+- 327 Core tests, 17 offline MCP/release tests and 30 synthetic fixture hashes passed.
+- Release package build: 0 warnings and 0 errors; package contents audited.
+- Supported-geometry/core matrix: 298 checks passed, 0 failed. **The close/reopen phase was explicitly excluded.**
+- All four loaded add-in DLL hashes matched the frozen installer.
+- 21 live MCP read-only/safety cases passed across six geometry families, including real saved source identities, no-mutation Preview, wrong-source/PID rejection and concurrent clients with autonomous control disabled.
+- Both gateways reached the same PID during real synchronization; Rhino busy state was observed. A separately disabled endpoint did not fall back to the enabled host.
+- All 60 live scale-benchmark rows passed independent count/change checks with no skips, errors or parallel mismatches. See [measured performance](PERFORMANCE.md).
+- The installer refused a real installation attempt while Pro was running, before creating its destination; the host remained running. WhatIf remains an allowed no-write preview.
 
-Portable checks for the diagnostic candidate: 327 Core tests, 17 offline MCP/release tests,
-30 synthetic fixture hashes, and a Release package build with 0 warnings and 0 errors.
-These checks do not certify embedded-host lifecycle behavior.
+V-Ray for Rhino 6.10 was removed from the validation machine, including six orphaned Rhino 7/8
+registrations backed up privately. The startup guard still refuses this exact known conflicting
+build when it is registered to autoload. New and subsequent saves use noninteractive `WriteFile`.
+The established default Rhino profile was restored after the experimental isolated profile stalled
+WPF dispatch. The fixture helper now correctly skips elevation writes in 2D maps.
+
+After explicit SDK project/edit saves, the benchmark host closed normally with exit code 0 in
+eight seconds, with no matching crash event or forced termination. A fresh full lifecycle attempt
+then closed normally with exit code 0 in 113 seconds and restored the document, seven links,
+source bindings, earth anchor, identical previews and both sides' edited values in its next process.
+Both processes' four loaded add-in assemblies matched the frozen installer.
+
+That attempt **failed** its next save-on-close check: pending Rhino work entered native
+`RhinoDoc.WriteFile` inside the application-closing handler and did not complete within 120 seconds.
+A private managed stack confirmed that call. This is a remaining release blocker; V-Ray removal
+and the earlier successful saves do not establish a complete lifecycle. The second independent
+matrix has not been run while this reproducible gate is unresolved.
+
+Actual UI/keyboard and local MCP review/denial/save/cancel checks remain pending; interactive control
+tooling currently fails before initialization. Recovery-dialog absence was not visually verified.
+Thirty programmatic component renders were generated but **not accepted**: the capture includes
+its parent offset, and setting the theme flag did not load dark resources in that running process.
+They do not establish visual acceptance.
+
+Two complete exact-package clean embedded-host lifecycle runs and full interactive MCP/UI acceptance
+are still required before publishing installer or gateway assets. See
+[save/shutdown diagnostics](SAVE_SHUTDOWN_DIAGNOSTICS.md) and [release requirements](PRODUCTION_READINESS.md).
 
 ## Earlier source preparation
 

@@ -18,7 +18,7 @@ components, direct Grasshopper preview and the other [roadmap](ROADMAP.md) items
 | Rendered Profile view | The live matrix constructs the dockpane and selects Profile, covering the read-only WPF binding. |
 | Visual acceptance | Inspect 320, 360 and 480 px layouts in light/dark themes, including long names, 10+ links, empty/disabled states, warnings, conflicts, failures and keyboard navigation. |
 | Public source | Synthetic fixtures only; original development history and local artifacts stay private. |
-| Website | Four pages build; relative links and anchors resolve; public installer download matches its checksum. |
+| Website | Five pages build; relative links and anchors resolve; public installer download matches its checksum. |
 | MCP control | Explicit PID routing, saved source identity, read-only preview, local review/denial, busy state, save/cancel, shutdown/reopen and companion coexistence pass against both frozen packages. |
 
 Historical desktop test versions: ArcGIS Pro 3.7.1.1904 and embedded Rhino 8.34.26223.11001.
