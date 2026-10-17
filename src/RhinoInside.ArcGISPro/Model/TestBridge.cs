@@ -1081,7 +1081,7 @@ namespace RhinoInside.ArcGISPro
                 if (map == null) return null;
 
                 var layer = LayerFactory.Instance.CreateLayer(new Uri(path), map);
-                SetOnGroundElevation(layer);
+                SetOnGroundElevation(layer, map);
                 return layer?.Name;
             }).Result;
 
@@ -1198,7 +1198,7 @@ namespace RhinoInside.ArcGISPro
                 if (map == null) return null;
 
                 var layer = LayerFactory.Instance.CreateLayer(new Uri(path), map);
-                SetOnGroundElevation(layer);
+                SetOnGroundElevation(layer, map);
                 return layer?.Name;
             }).Result;
 
@@ -1212,9 +1212,9 @@ namespace RhinoInside.ArcGISPro
         /// No-op for a 2D map or a layer
         /// type with no elevation concept (CanSetElevationTypeDefinition returns false).
         /// </summary>
-        static void SetOnGroundElevation(Layer layer)
+        static void SetOnGroundElevation(Layer layer, Map map)
         {
-            if (layer == null) return;
+            if (layer == null || map?.MapType != ArcGIS.Core.CIM.MapType.Scene) return;
             var def = new ArcGIS.Desktop.Mapping.ElevationTypeDefinition
             {
                 ElevationType = ArcGIS.Desktop.Mapping.LayerElevationType.OnGround
