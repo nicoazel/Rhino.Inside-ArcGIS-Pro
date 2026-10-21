@@ -1,34 +1,42 @@
 {
   "name": "Rhino.Inside-ArcGIS",
-  "tag": "v1.3.0-preview.1",
+  "tag": "v2.0.0-alpha.1",
   "status": "experimental-prerelease",
   "available": true,
   "stable": false,
-  "sourceCommit": "5dd601f97165ca8a23a3ece609de5fa0091c47dd",
-  "releaseUrl": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/tag/v1.3.0-preview.1",
+  "sourceCommit": "5db2dc10135ac72b487422aa4d51a8c0790ffe4f",
+  "releaseUrl": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/tag/v2.0.0-alpha.1",
+  "instructions": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/blob/main/docs/PREVIEW_INSTALL.md",
+  "includesGrasshopper": true,
+  "minimumRhinoVersion": "8.36.26282.15001",
+  "requiresSeparateGhaInstaller": false,
+  "requiresYak": false,
+  "knownIssues": [
+    "Native project-save prompts block unattended shutdown; previous lifecycle work also encountered Rhino save-on-close stalls.",
+    "Interactive slider, 3D scene, full repeat lifecycle and install/upgrade/uninstall certification remain incomplete."
+  ],
+  "installMethod": "Install the esriAddinX with Pro closed. Or extract the ZIP, inspect the script, then pass -Version 2.0.0-alpha.1 -AllowPrerelease and -PackageDirectory.",
+  "requiresProClosedForInstall": true,
+  "signed": false,
+  "writesRequireLocalReview": true,
   "bundle": {
-    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v1.3.0-preview.1/RhinoInside-ArcGIS-v1.3.0-preview.1-win-x64.zip",
-    "sha256": "71b86452761a2b9356a033e447387b7acd0eac24b2bf4d18d288d95f59ca3733"
+    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v2.0.0-alpha.1/RhinoInside-ArcGIS-v2.0.0-alpha.1-win-x64.zip",
+    "sha256": "c53d02a08e36d6d056c3c854b846ea5a5cf0e903848326e12266e360458b33d5"
   },
   "installer": {
-    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v1.3.0-preview.1/RhinoInside.ArcGISPro-v1.3.0.esriAddinX",
-    "sha256": "f94396760c5081c09c3af36161a279474d60a85bd275f4827fde9850c25e5805"
+    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v2.0.0-alpha.1/RhinoInside.ArcGISPro-v2.0.0-alpha.1.esriAddinX",
+    "sha256": "8a4eb3ba151eba769dcfd31052ffdbf2b6aaef0c6d6d6ff3b4aa3bde22be3a55"
   },
   "mcpGateway": {
-    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v1.3.0-preview.1/RhinoInside-Mcp-v1.3.0.zip",
+    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v2.0.0-alpha.1/RhinoInside-Mcp-v2.0.0-alpha.1.zip",
     "sha256": "5a991c5ce6d4d5abc6d322f987dbf691b8c9d8778f2dede267d979767c71cd0a"
   },
   "installScript": {
-    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v1.3.0-preview.1/Install-RhinoInsideArcGIS.ps1",
-    "sha256": "fee1a03b51ef797eeb9bdc89d2918b0754c4e76119f661c576c1e735147b8c58"
+    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v2.0.0-alpha.1/Install-RhinoInsideArcGIS.ps1",
+    "sha256": "843967d403489e4a193edf920b33f508428f80fe07898280ad2af04f89eaae8d"
   },
-  "instructions": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/blob/main/docs/PREVIEW_INSTALL.md",
-  "knownIssues": [
-    "Saving pending Rhino work during ArcGIS Pro shutdown can stall in native WriteFile.",
-    "Full lifecycle, visual/keyboard and local MCP approval acceptance are incomplete."
-  ],
-  "installMethod": "Extract bundle, inspect included script, then use -PackageDirectory with an explicit preview destination.",
-  "requiresProClosedForInstall": true,
-  "signed": false,
-  "writesRequireLocalReview": true
+  "example": {
+    "url": "https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/download/v2.0.0-alpha.1/MapDesign.ghx",
+    "sha256": "f05a8df972317d2e1cb5cf0279b8d9ccb1a07f6caa9c36111f3a4a459ea86189"
+  }
 }

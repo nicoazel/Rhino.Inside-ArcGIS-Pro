@@ -1,7 +1,7 @@
 # Roadmap
 
 The 1.3 synchronization baseline covers the ArcGIS Pro 3.7 add-in with embedded Rhino 8.
-The next major development wave is 2.0.0-alpha.1 on `codex/v2-grasshopper-map-workflows`.
+The major Grasshopper development wave is available as the experimental 2.0.0-alpha.1 release.
 Rhino 7 support has been removed from the plan.
 
 ## Grasshopper 2.0 development wave
@@ -18,7 +18,8 @@ access remains in the existing ArcGIS adapter and an embedded host service.
 | Update existing | Frozen review plans, full read-time baseline and schema, GlobalID-first matching, geometry/attribute patches, atomic edit operation | Core contracts and embedded attribute/geometry updates plus stale-plan rejection passed; live undo qualification pending |
 | Package and examples | GHA included in add-in, compile-only host SDK references, component documentation, disposable acceptance harness, runnable `examples/Grasshopper/MapDesign.ghx` | Builds and functional hosts passed; clean-close gate failed at the native project-save prompt |
 
-The alpha has **322 passing Core tests**. Disposable hosts D and E recorded 16 and 17 functional
+The original development snapshot had **322 passing Core tests**; the public integration
+passes **358 Core tests**. See the release asset `ALPHA-VALIDATION.md` for exact-package evidence. Disposable hosts D and E recorded 16 and 17 functional
 checks respectively (E also generated the example): actual GHA registration and component
 instantiation, an asynchronous Grasshopper solution, feature-class creation, GlobalID readback,
 model-coordinate and null preservation, read-only planning, attribute and geometry updates,
@@ -52,13 +53,6 @@ project into a fresh folder with its own geodatabase, backs up the installed add
 it after its owned host exits. A stuck disposable host is recorded as a clean-close failure and
 terminated by its verified process identity before restoring the backup. Run the full existing `tools/e2e.ps1` matrix twice
 before promoting the major version.
-
-The starting checkout contained unfinished copy-identity and shutdown work, preserved in checkpoint
-commit `2f06600`. Its exact pre-wave
-patch and status are recorded locally under `artifacts/grasshopper-v2/`; they are not release
-source. The initial Core suite was 284/291; the seven failures were stale fake-adapter/ownership
-expectations. Those tests now honor follow-up user-string writes and exclude per-object owner
-GUIDs when comparing independent pull runs.
 
 ## Current release
 
