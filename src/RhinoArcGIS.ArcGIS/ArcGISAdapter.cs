@@ -24,7 +24,7 @@ namespace RhinoArcGIS.ArcGIS
     /// MCT via <see cref="QueuedTask"/>. Read, write, schema creation, and cleanup paths are all
     /// implemented here and exercised by the opt-in live ArcGIS Pro harness.
     /// </summary>
-    public sealed class ArcGISAdapter : IArcGISAdapter, IFeatureLookup, ICrsProjector, ICrsUnitScale, ILocalFrameProjector, IGeodeticMapProvider
+    public sealed partial class ArcGISAdapter : IArcGISAdapter, IFeatureLookup, ICrsProjector, ICrsUnitScale, ILocalFrameProjector, IGeodeticMapProvider
     {
         /// <summary>
         /// The layer whose coordinate system the georeference is built in. Feature geometry is
@@ -122,7 +122,8 @@ namespace RhinoArcGIS.ArcGIS
         /// </summary>
         public string CreateFeatureClass(string geodatabasePath, string requestedName,
                                          CoreGeometryTarget target,
-                                         IReadOnlyList<CoreFieldDefinition> fields)
+                                         IReadOnlyList<CoreFieldDefinition> fields, string mapUri = null,
+                                         bool absoluteElevation = false)
         {
             if (string.IsNullOrWhiteSpace(geodatabasePath))
                 throw new ArgumentException("A file geodatabase path is required.", nameof(geodatabasePath));
@@ -131,7 +132,7 @@ namespace RhinoArcGIS.ArcGIS
 
             return QueuedTask.Run(() =>
             {
-                var map = ActiveMap.Current
+                var map = (mapUri == null ? ActiveMap.Current : DesignMap(mapUri))
                     ?? throw new InvalidOperationException("Open a map or scene before creating an ArcGIS layer.");
                 if (!Directory.Exists(geodatabasePath))
                     throw new DirectoryNotFoundException($"The project's default geodatabase does not exist: {geodatabasePath}");
@@ -187,7 +188,7 @@ namespace RhinoArcGIS.ArcGIS
                         ?? throw new InvalidOperationException("ArcGIS created the feature class but could not add it to the active map.");
                     // Scene-ground placement is the intended default only for 3D design meshes.
                     // Point/line/polygon classes must retain their authored absolute Z behavior.
-                    if (target == CoreGeometryTarget.Multipatch) SetOnGroundElevation(layer);
+                    if (target == CoreGeometryTarget.Multipatch && !absoluteElevation) SetOnGroundElevation(layer);
                     return layer.Name;
                 }
                 catch
@@ -413,8 +414,7 @@ namespace RhinoArcGIS.ArcGIS
                     record.Identity.ArcGisGlobalId = gid;
                 }
 
-                if (value != null)
-                    record.Attributes[f.Name] = Stringify(value);
+                record.Attributes[f.Name] = value == null || value == DBNull.Value ? null : Stringify(value);
             }
 
             return record;
@@ -451,8 +451,8 @@ namespace RhinoArcGIS.ArcGIS
             catch { return null; }
         }
 
-        private FeatureLayer FindLayer(string layerName) =>
-            ActiveMap.FindLayer(layerName, ExpectedSource, SourceOfLayer);
+        private FeatureLayer FindLayer(string layerName) => BoundLayer == null
+            ? ActiveMap.FindLayer(layerName, ExpectedSource, SourceOfLayer) : ResolveBoundLayer();
 
         private static string SourceOfLayer(FeatureLayer layer)
         {
@@ -478,6 +478,8 @@ namespace RhinoArcGIS.ArcGIS
         /// <summary>The spatial reference the georeference is built in; see <see cref="CrsLayer"/>.</summary>
         private SpatialReference GeoreferenceSpatialReference()
         {
+            if (BoundLayer != null) return ResolveBoundLayer().GetSpatialReference();
+            if (CrsMapUri != null) return DesignMap(CrsMapUri).SpatialReference;
             if (!string.IsNullOrWhiteSpace(CrsLayer))
             {
                 var sr = FindLayer(CrsLayer)?.GetSpatialReference();

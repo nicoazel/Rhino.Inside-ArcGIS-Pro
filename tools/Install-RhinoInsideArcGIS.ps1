@@ -8,13 +8,16 @@ Downloads, verifies and installs the pinned public release for the current Windo
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version = '1.3.0',
+    [ValidatePattern('^\d+\.\d+\.\d+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$')][string]$Version = '1.3.0',
+    [switch]$AllowPrerelease,
     [switch]$WithMcp,
     [switch]$DownloadOnly,
     [string]$DestinationDirectory = (Join-Path $env:LOCALAPPDATA "RhinoInsideArcGIS\$Version"),
     [string]$PackageDirectory
 )
 $ErrorActionPreference = 'Stop'
+if ($Version.Contains('-') -and -not $AllowPrerelease) { throw 'Experimental versions require explicit -AllowPrerelease. Read the release known issues first.' }
+$numericVersion = $Version.Split('-')[0]
 $repository = 'nicoazel/Rhino.Inside-ArcGIS-Pro'
 $installerName = "RhinoInside.ArcGISPro-v$Version.esriAddinX"
 $gatewayName = "RhinoInside-Mcp-v$Version.zip"
@@ -50,7 +53,11 @@ $manifestPath = Get-ReleaseFile 'release-manifest.json'
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 if ($manifest.version -ne $Version -or $manifest.installer -ne $installerName -or $manifest.sha256 -notmatch '^[a-fA-F0-9]{64}$' -or
     $manifest.sourceHasUncommittedChanges -ne $false -or $manifest.sourceCommit -notmatch '^[a-fA-F0-9]{40}$' -or
-    ($manifest.status -ne 'published' -and -not $PackageDirectory)) { throw 'Release manifest does not identify a clean, published, matching installer.' }
+    ($manifest.status -ne 'published' -and -not $PackageDirectory -and -not ($AllowPrerelease -and $Version.Contains('-') -and $manifest.status -eq 'experimental-prerelease'))) { throw 'Release manifest does not identify a clean, published, matching installer.' }
+if (-not $DownloadOnly -and $manifest.minimumRhinoVersion) {
+    $rhinoVersion = (Get-Item -LiteralPath (Join-Path $env:ProgramFiles 'Rhino 8\System\Rhino.exe')).VersionInfo.ProductVersion
+    if ([version]$rhinoVersion -lt [version]$manifest.minimumRhinoVersion) { throw "This Grasshopper build requires Rhino $($manifest.minimumRhinoVersion) or newer; found $rhinoVersion." }
+}
 $sumsPath = Get-ReleaseFile 'SHA256SUMS.txt'
 function Get-VerifiedFile([string]$Name, [string]$Expected) {
     if ($Expected -notmatch '^[a-fA-F0-9]{64}$') { throw "Invalid manifest checksum for $Name." }
@@ -68,8 +75,18 @@ try {
     if (-not $entry) { throw 'Installer is missing Config.daml.' }
     $reader = [IO.StreamReader]::new($entry.Open())
     try { [xml]$config = $reader.ReadToEnd() } finally { $reader.Dispose() }
-    if ($config.ArcGIS.AddInInfo.id -ne '{f10f6246-8091-4aad-8b5c-2bcb6b523784}' -or $config.ArcGIS.AddInInfo.version -ne $Version) { throw 'Installer identity/version mismatch.' }
+    if ($config.ArcGIS.AddInInfo.id -ne '{f10f6246-8091-4aad-8b5c-2bcb6b523784}' -or $config.ArcGIS.AddInInfo.version -ne $numericVersion) { throw 'Installer identity/version mismatch.' }
+    if ($manifest.includesGrasshopper) {
+        foreach ($required in @('Install/RhinoArcGIS.Grasshopper.gha','Install/Examples/Grasshopper/MapDesign.ghx')) {
+            if (-not $archive.GetEntry($required)) { throw "Installer is missing bundled Grasshopper content: $required" }
+        }
+    }
 } finally { $archive.Dispose() }
+$example = $null
+if ($manifest.includesGrasshopper) {
+    if ($manifest.example -ne 'MapDesign.ghx') { throw 'Unexpected example filename.' }
+    $example = Get-VerifiedFile $manifest.example $manifest.exampleSha256
+}
 $gatewayDirectory = $null
 if ($WithMcp) {
     if ($manifest.mcpGatewayAsset -ne $gatewayName) { throw 'Gateway version mismatch.' }
@@ -101,5 +118,6 @@ if (-not $DownloadOnly) {
 [ordered]@{
     version = $Version; installed = $installed; installer = $installer; sha256 = $manifest.sha256
     sourceCommit = $manifest.sourceCommit; signed = $false; mcpDirectory = $gatewayDirectory
+    includesGrasshopper = [bool]$manifest.includesGrasshopper; example = $example
     nextStep = $(if ($DownloadOnly) { 'Verified download complete.' } elseif ($WithMcp) { 'Run mcp\Start-RhinoInsideArcGIS.ps1 -Project <project.aprx>; use its printed PID and MCP configuration.' } else { 'Open ArcGIS Pro, check Settings > Add-In Manager, then Rhino.Inside > Launch Rhino.' })
 } | ConvertTo-Json

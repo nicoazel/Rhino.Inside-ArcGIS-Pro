@@ -104,6 +104,10 @@ namespace RhinoInside.ArcGISPro
 
             switch (command)
             {
+                case "grasshopperacceptance":
+                    return GrasshopperAcceptance.Run(request, _dispatcher);
+                case "grasshopperexample":
+                    return OnUi(() => GrasshopperExample.Open((string)request["path"]));
                 case "status":
                     return OnUi(() => new
                     {

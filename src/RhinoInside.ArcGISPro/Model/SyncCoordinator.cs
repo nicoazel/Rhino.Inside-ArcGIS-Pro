@@ -86,6 +86,10 @@ namespace RhinoInside.ArcGISPro
             return await operation().ConfigureAwait(false);
         }, cancellationToken);
 
+        /// <summary>Worker-thread entry point shared by Grasshopper and the dockpane mutation path.</summary>
+        internal static T RunMapOperation<T>(Func<T> action) =>
+            RunGatedAsync(() => Task.Run(action)).GetAwaiter().GetResult();
+
         /// <summary>
         /// Whether design attributes may be edited in Rhino and pushed back.
         /// </summary>
@@ -451,7 +455,7 @@ namespace RhinoInside.ArcGISPro
                 throw new InvalidOperationException("The active Rhino document changed during synchronization; return to the original document and preview again.");
         }
 
-        static void EnsureEarthAnchor(uint? expectedDocumentSerial = null)
+        internal static void EnsureEarthAnchor(uint? expectedDocumentSerial = null)
         {
             var documentSerial = expectedDocumentSerial ?? OnUi(RhinoHost.GetActiveDocumentSerial);
             var anchor = OnUi(() =>

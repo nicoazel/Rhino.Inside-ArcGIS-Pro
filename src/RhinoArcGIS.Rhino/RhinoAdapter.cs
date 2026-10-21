@@ -703,7 +703,7 @@ namespace RhinoArcGIS.Rhino
             return ids;
         }
 
-        private static List<GeometryBase> PrepareGeometry(RhinoDoc doc, NeutralGeometry g)
+        internal static List<GeometryBase> PrepareGeometry(RhinoDoc doc, NeutralGeometry g)
         {
             var result = new List<GeometryBase>();
             if (g == null) return result;

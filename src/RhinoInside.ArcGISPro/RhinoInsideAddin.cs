@@ -60,6 +60,7 @@ namespace RhinoInside.ArcGISPro
                 RhinoArcGIS.ArcGIS.ActiveMap.Remember(e.IncomingView?.Map));
             ArcGIS.Desktop.Core.Events.ProjectClosedEvent.Subscribe(_ =>
             {
+                (RhinoArcGIS.Core.Grasshopper.MapDesignConnection.Host as GrasshopperMapHost)?.CloseProject();
                 RhinoArcGIS.ArcGIS.ActiveMap.Forget();
                 // A project without module settings does not call OnReadSettingsAsync.
                 _pendingRhinoDocumentPath = null;
@@ -110,6 +111,8 @@ namespace RhinoInside.ArcGISPro
         protected override void Uninitialize()
         {
             McpControlBridge.Stop();
+            (RhinoArcGIS.Core.Grasshopper.MapDesignConnection.Host as GrasshopperMapHost)?.CloseProject();
+            RhinoArcGIS.Core.Grasshopper.MapDesignConnection.Host = null;
             try { RhinoHost.Shutdown(); }
             catch (Exception ex) { TestBridge.Log("Rhino shutdown failed: " + ex); }
             TestBridge.Log("add-in uninitialized");
@@ -154,6 +157,7 @@ namespace RhinoInside.ArcGISPro
         /// <summary>Opens the project's saved Rhino document once Rhino is actually up.</summary>
         void OnRhinoStarted(object sender, EventArgs e)
         {
+            RhinoArcGIS.Core.Grasshopper.MapDesignConnection.Host ??= new GrasshopperMapHost(System.Windows.Application.Current.Dispatcher);
             string path = _pendingRhinoDocumentPath;
             if (string.IsNullOrEmpty(path) || !File.Exists(path)) return;
 

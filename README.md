@@ -32,6 +32,73 @@ status, saved links, profiles and preview, plus locally reviewed launch, pull, a
 It uses explicit host-PID selection. Public installer certification must include coexistence with
 the separately installed ArcGISPro.MCP gateway.
 
+### 2.0 development wave: Grasshopper
+
+The `codex/v2-grasshopper-map-workflows` branch develops a **2.0.0-alpha.1** add-in with an
+embedded Grasshopper component library. It is a development build; release acceptance is tracked
+in [the roadmap](docs/ROADMAP.md#grasshopper-20-development-wave).
+
+Launch Rhino, then click **Grasshopper** on the Rhino.Inside ribbon. The **ArcGIS** component tab
+provides Map, Map Layers, Layer Info, Read Features, Feature Geometry, Feature Attribute, Build
+Feature, Set Feature Geometry, Set Attribute, Field, Map Preview, Plan Updates, Commit Updates,
+Create Layer and Append Features.
+
+Grasshopper in ArcGIS Pro's .NET 10 process requires **Rhino 8.36.26282.15001 or newer**, including
+McNeel's RH-99401 IronPython fix. Older builds can display a blocking `scriptcontext` initialization
+error even when the Python module is installed. The Grasshopper launcher checks this before loading
+the plug-in. See [McNeel's report](https://discourse.mcneel.com/t/rir-gh-throws-failed-loading-the-scriptcontext-module-error/222948)
+and [hotfix confirmation](https://discourse.mcneel.com/t/scripcontext-module-error-in-latest-rhino-update-everything-is-broken/223554).
+
+If older installed Grasshopper add-ons fail under the ArcGIS runtime, use **Grasshopper Core**
+as the first Grasshopper launch in a fresh Pro session. This process loads Rhino's bundled
+components plus the ArcGIS library. It does not move add-on files or change the saved library
+folder list. This opt-in mode uses Rhino's internal hosted-library selector with an exact-signature
+check; an unsupported future Grasshopper build reports that the selector is unavailable.
+
+Use **Map → Map Layers → Read Features** to get detached snapshots without baking. Read Features
+defaults to selected features and a 1,000-feature limit; its Truncated output reports incomplete
+reads. Use the component menu's **Refresh from ArcGIS** after selection or data changes. Feature
+Geometry returns one tree branch per feature, including multipart pieces; keep the corresponding
+feature snapshot when filtering or reordering geometry.
+
+For multipart edits, wire Feature Geometry's **Matching Features** tree and transformed geometry
+branches into Set Feature Geometry. Each geometry branch is reassembled as one feature. Flatten
+the edited feature output when preparing one combined update plan.
+
+For live design, connect model geometry to **Map Preview** and choose the output map or scene.
+Preview uses absolute elevations and temporary graphics. Color includes alpha; Width controls
+line weight. Disable preview or remove the component to clear its overlays. No feature class is
+created. Mesh appearance in scenes remains a live visual acceptance gate.
+
+For existing data, use **Set Attribute** and/or **Set Feature Geometry**, connect the edited
+snapshots to **Plan Updates**, review the report, then connect its plan to **Commit Updates** and
+choose **Commit reviewed updates** from the component menu. The plan is frozen; commit rechecks
+the dataset and read-time baselines. Protected fields, duplicate targets and stale edits block
+the whole operation. Geometry-only and attribute-only changes preserve the other values.
+
+For new data, define fields with **Field**, select PointZ, PolylineZ, PolygonZ or Multipatch in
+**Create Layer**, then choose **Create layer once** from its menu. The default destination is the
+project file geodatabase; an existing file geodatabase can be supplied. Save or discard pending
+GIS edits before schema creation. Use **Build Feature** with explicit unique keys, set any design
+attributes, and connect these drafts and the created layer to **Append Features**. Choose
+**Publish keyed features** to publish. Later explicit actions update the same keyed output set;
+recomputing or moving a slider never writes. Create and Append retain receipts in the definition.
+To publish a different key set, use a new Append component. Reconnect the original layer after
+reopening a project; changed or deleted GIS outputs require a fresh read and review.
+
+This wave targets feature layers in the embedded Rhino 8 / ArcGIS Pro 3.7 host. Other layer types
+are discoverable with their capabilities. Automatic source watching, feature services, arbitrary
+file-format export, deletion, vertical datum transformations, and material-faithful rendering
+are outside this alpha's supported boundary.
+
+Open [the runnable example](examples/Grasshopper/MapDesign.ghx) after launching Grasshopper from
+the ribbon. Its top branch reads the first listed layer's selected features. The lower branch
+previews a synthetic massing box and includes explicit Create/Publish components. The lift slider
+moves the box in model units; publishing still requires the component menu action. The example
+was authored in metres; use a metre-based Rhino document or adapt its geometry to your units.
+
+### Existing synchronization
+
 - Pull ArcGIS features into editable, tracked Rhino geometry.
 - Preview object, geometry and field changes without writing either model.
 - Apply two-way, pull-only or push-only links with explicit conflict policy.

@@ -873,7 +873,10 @@ namespace RhinoArcGIS.Core.Tests
                 Objects.FirstOrDefault(o => o.RhinoGuid == rhinoGuid);
             public void WriteUserStrings(Guid rhinoGuid, IReadOnlyDictionary<string, string> userStrings)
             {
-                Written[rhinoGuid] = userStrings;
+                var accumulated = Written.TryGetValue(rhinoGuid, out var previous)
+                    ? new Dictionary<string, string>(previous) : new Dictionary<string, string>();
+                foreach (var pair in userStrings) accumulated[pair.Key] = pair.Value;
+                Written[rhinoGuid] = accumulated;
                 var snap = ReadObject(rhinoGuid);
                 if (snap != null)
                     foreach (var kv in userStrings) snap.UserStrings[kv.Key] = kv.Value;

@@ -1,6 +1,6 @@
 <# Creates an unsigned, versioned local release candidate. Does not publish or tag anything. #>
 [CmdletBinding()]
-param([string]$OutputDirectory)
+param([string]$OutputDirectory, [string]$Version)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 if (Get-Process -Name ArcGISPro -ErrorAction SilentlyContinue) {
@@ -19,10 +19,15 @@ $extraSource = @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -File | Where-O
 if ($extraSource.Count) { throw "Untracked or ignored compile inputs: $($extraSource.FullName -join ', ')" }
 if (& git -C $repo status --porcelain) { throw 'Commit the release source before packaging.' }
 $release = Get-Content (Join-Path $repo 'site/release.json') -Raw | ConvertFrom-Json
-$version = [string]$release.version
-if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version.' }
+if (-not $Version) {
+    [xml]$project = Get-Content (Join-Path $repo 'src/RhinoInside.ArcGISPro/RhinoInside.ArcGISPro.csproj')
+    $Version = [string]$project.Project.PropertyGroup.Version | Select-Object -First 1
+}
+$version = $Version
+if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$') { throw 'Invalid release version.' }
+$numericVersion = $version.Split('-')[0]
 [xml]$daml = Get-Content (Join-Path $repo 'src/RhinoInside.ArcGISPro/Config.daml')
-if ($daml.ArcGIS.AddInInfo.version -ne $version) { throw 'Config.daml and site/release.json versions differ.' }
+if ($daml.ArcGIS.AddInInfo.version -ne $numericVersion) { throw 'Config.daml and package versions differ.' }
 if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repo "artifacts/release-v$version" }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $OutputDirectory) { throw 'Choose a new output directory; existing release artifacts are never overwritten.' }
@@ -37,7 +42,7 @@ try {
     $nodeTests = @((Join-Path $repo 'tests/site-release.test.mjs')) + @(Get-ChildItem -LiteralPath (Join-Path $repo 'tests/mcp') -Filter *.test.mjs -File | ForEach-Object { $_.FullName })
     & node --test @nodeTests
     if ($LASTEXITCODE -ne 0) { throw 'Offline MCP protocol tests failed.' }
-    & dotnet build src/RhinoInside.ArcGISPro.AddIn.sln -c Release --no-incremental "-p:BaseOutputPath=$buildRoot"
+    & dotnet build src/RhinoInside.ArcGISPro.AddIn.sln -c Release --no-incremental "-p:BaseOutputPath=$buildRoot" '-p:ArcGISFolder=' '-p:DeployAddIn=false'
     if ($LASTEXITCODE -ne 0) { throw 'Release build failed.' }
     $packages = @(Get-ChildItem -LiteralPath $buildRoot -Filter *.esriAddinX -Recurse -File)
     if ($packages.Count -ne 1) { throw "Expected one installer, found $($packages.Count)." }
@@ -51,12 +56,14 @@ try {
         if ($unexpected.Count) { throw "Forbidden package entries: $($unexpected -join ', ')" }
         foreach ($required in @('Config.daml','Install/RhinoInside.ArcGISPro.dll','Install/RhinoArcGIS.Core.dll',
                                'Install/RhinoArcGIS.ArcGIS.dll','Install/RhinoArcGIS.Rhino.dll',
-                               'Install/LICENSE','Install/THIRD_PARTY_NOTICES.md')) {
+                               'Install/LICENSE','Install/THIRD_PARTY_NOTICES.md',
+                               'Install/RhinoArcGIS.Grasshopper.gha','Install/Examples/Grasshopper/MapDesign.ghx',
+                               'Install/Examples/Grasshopper/README.md')) {
             if ($entries -notcontains $required) { throw "Missing package entry: $required" }
         }
         $reader = [IO.StreamReader]::new($archive.GetEntry('Config.daml').Open())
         try { [xml]$packagedDaml = $reader.ReadToEnd() } finally { $reader.Dispose() }
-        if ($packagedDaml.ArcGIS.AddInInfo.version -ne $version) { throw 'Packaged version mismatch.' }
+        if ($packagedDaml.ArcGIS.AddInInfo.version -ne $numericVersion) { throw 'Packaged version mismatch.' }
     } finally { $archive.Dispose() }
     $asset = "RhinoInside.ArcGISPro-v$version.esriAddinX"
     Copy-Item -LiteralPath $packages[0].FullName -Destination (Join-Path $OutputDirectory $asset)
@@ -67,11 +74,14 @@ try {
     $gatewayAsset = "RhinoInside-Mcp-v$version.zip"
     [IO.Compression.ZipFile]::CreateFromDirectory($gatewayRoot, (Join-Path $OutputDirectory $gatewayAsset))
     $gatewayHash = (Get-FileHash -LiteralPath (Join-Path $OutputDirectory $gatewayAsset) -Algorithm SHA256).Hash.ToLowerInvariant()
-    @("$hash  $asset", "$gatewayHash  $gatewayAsset") | Set-Content -LiteralPath (Join-Path $OutputDirectory 'SHA256SUMS.txt') -Encoding ascii
+    Copy-Item -LiteralPath (Join-Path $repo 'examples/Grasshopper/MapDesign.ghx') -Destination $OutputDirectory
+    Copy-Item -LiteralPath (Join-Path $repo 'examples/Grasshopper/README.md') -Destination (Join-Path $OutputDirectory 'GRASSHOPPER-EXAMPLE.md')
+    $exampleHash = (Get-FileHash -LiteralPath (Join-Path $OutputDirectory 'MapDesign.ghx') -Algorithm SHA256).Hash.ToLowerInvariant()
+    @("$hash  $asset", "$gatewayHash  $gatewayAsset", "$exampleHash  MapDesign.ghx") | Set-Content -LiteralPath (Join-Path $OutputDirectory 'SHA256SUMS.txt') -Encoding ascii
     Copy-Item -LiteralPath (Join-Path $repo 'LICENSE'),(Join-Path $repo 'ACKNOWLEDGEMENTS.md'),(Join-Path $repo 'THIRD_PARTY_NOTICES.md') -Destination $OutputDirectory
     $manifest = [ordered]@{
         version = $version
-        status = 'candidate'
+        status = $(if ($version.Contains('-')) { 'experimental-prerelease' } else { 'candidate' })
         sourceCommit = (& git rev-parse HEAD).Trim()
         sourceHasUncommittedChanges = [bool](& git status --porcelain)
         installer = $asset
@@ -79,6 +89,11 @@ try {
         mcpGatewayAsset = $gatewayAsset
         mcpGatewaySha256 = $gatewayHash
         signed = $false
+        addinVersion = $numericVersion
+        includesGrasshopper = $true
+        minimumRhinoVersion = '8.36.26282.15001'
+        example = 'MapDesign.ghx'
+        exampleSha256 = $exampleHash
         packagedEntries = $entries
         embeddedHostValidation = 'See the separately recorded E2E evidence; this script does not run ArcGIS Pro.'
     }

@@ -12,6 +12,7 @@ namespace RhinoArcGIS.Core.Spatial
         public double Y { get; }
         public double Z { get; }
 
+        [Newtonsoft.Json.JsonConstructor]
         public Xyz(double x, double y, double z)
         {
             X = x;

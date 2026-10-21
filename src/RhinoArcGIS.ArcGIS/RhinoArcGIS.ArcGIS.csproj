@@ -20,6 +20,14 @@
 
   <!-- ArcGIS Pro SDK assemblies are referenced (not copied) from the local Pro install. -->
   <ItemGroup>
+    <Reference Include="ArcGIS.Desktop.Extensions">
+      <HintPath>C:\Program Files\ArcGIS\Pro\bin\Extensions\DesktopExtensions\ArcGIS.Desktop.Extensions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ArcGIS.Desktop.Catalog">
+      <HintPath>C:\Program Files\ArcGIS\Pro\bin\Extensions\Catalog\ArcGIS.Desktop.Catalog.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="ArcGIS.Core">
       <HintPath>C:\Program Files\ArcGIS\Pro\bin\ArcGIS.Core.dll</HintPath>
       <Private>False</Private>

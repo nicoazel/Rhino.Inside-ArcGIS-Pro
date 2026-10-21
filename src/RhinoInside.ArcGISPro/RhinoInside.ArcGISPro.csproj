@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Version>1.3.0</Version>
+    <Version>2.0.0-alpha.1</Version>
     <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -28,6 +28,7 @@
     <Folder Include="ViewModel\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\RhinoArcGIS.Grasshopper\RhinoArcGIS.Grasshopper.csproj" ReferenceOutputAssembly="false" />
     <!-- The interop stack: a pure core plus one adapter per SDK. RhinoArcGIS.Rhino pulls in
          RhinoCommon as a compile-time reference only, so nothing here places a RhinoCommon copy in
          the add-in folder that would shadow the one RhinoHost loads from the Rhino install. -->
@@ -173,5 +174,16 @@
     <PropertyGroup>
       <ZipIntermediatePath>$(IntermediateOutputPath)temp_archive\</ZipIntermediatePath>
     </PropertyGroup>
+  </Target>
+  <Target Name="IncludeGrasshopperLibrary" BeforeTargets="AssignTargetPaths">
+    <MSBuild Projects="..\RhinoArcGIS.Grasshopper\RhinoArcGIS.Grasshopper.csproj" Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="GrasshopperLibrary" />
+    </MSBuild>
+    <ItemGroup>
+      <Content Include="@(GrasshopperLibrary)" Link="RhinoArcGIS.Grasshopper.gha" CopyToOutputDirectory="PreserveNewest" />
+      <Content Include="..\..\examples\Grasshopper\MapDesign.ghx" Link="Examples\Grasshopper\MapDesign.ghx" CopyToOutputDirectory="PreserveNewest" />
+      <Content Include="..\..\examples\Grasshopper\README.md" Link="Examples\Grasshopper\README.md" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
   </Target>
 </Project>
