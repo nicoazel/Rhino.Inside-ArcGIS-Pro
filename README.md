@@ -4,10 +4,11 @@ Rhino.Inside-ArcGIS hosts Rhino 8 inside ArcGIS Pro 3.7 and keeps ArcGIS feature
 Rhino layers. It supports preview-before-write synchronization for Point Z, Polyline Z, Polygon Z,
 multipart polygons and Multipatch geometry, including attributes and durable GlobalID identity.
 
-**Source candidate:** isolated live sync, MCP review and reopen checks passed for RC1. The
-review hardening in RC2 adds document guards, cancellation and geometry regressions. Exact installer,
-MCP coexistence and full visual acceptance remain pending. See
-[release status](docs/RELEASE_STATUS.md) for the current boundary.
+**Latest experimental download: [v2.0.0-alpha.1](https://github.com/nicoazel/Rhino.Inside-ArcGIS-Pro/releases/tag/v2.0.0-alpha.1)** includes the Grasshopper library and
+[runnable MapDesign.ghx example](examples/Grasshopper/MapDesign.ghx). The `.esriAddinX` installs
+our Grasshopper components automatically; no separate GHA installer or Yak package is required.
+Rhino itself must already be installed and licensed. This is an alpha with known shutdown issues;
+stable certification and full interactive acceptance remain pending.
 
 The [public website](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/) is generated from [`site/`](site/). See the
 [installation and release preparation](docs/PUBLISHING.md) and
@@ -21,7 +22,7 @@ use the [pinned PowerShell installer](docs/AGENT_INSTALL.md), which verifies the
 JSON; `-WithMcp` adds the optional gateway and a launcher that prints an exact-PID client config.
 The download panel shows whether a stable installer is available. Source prereleases are not installers.
 
-Requirements: Windows 11 x64, licensed ArcGIS Pro 3.7 and Rhino 8. No SDK is needed to install.
+Requirements for the 2.0 alpha: Windows 11 x64, licensed ArcGIS Pro 3.7 and Rhino 8.36.26282.15001 or newer. No SDK is needed to install.
 Node.js 22+ is needed only for MCP control. Read [About](https://nicoazel.github.io/Rhino.Inside-ArcGIS-Pro/about.html)
 for the project's origins and acknowledgements.
 
@@ -34,7 +35,7 @@ the separately installed ArcGISPro.MCP gateway.
 
 ### 2.0 development wave: Grasshopper
 
-The `codex/v2-grasshopper-map-workflows` branch develops a **2.0.0-alpha.1** add-in with an
+The **2.0.0-alpha.1** experimental release provides an
 embedded Grasshopper component library. It is a development build; release acceptance is tracked
 in [the roadmap](docs/ROADMAP.md#grasshopper-20-development-wave).
 

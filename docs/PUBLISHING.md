@@ -126,3 +126,15 @@ do not relabel the candidate manifest as published to bypass the stable installe
 keeps stable `available=false` and uses separate `preview.json` metadata and clearly labeled preview
 links. Verify every public asset anonymously before announcing the download. The stable sequence
 and all its acceptance requirements still apply before publishing a stable release.
+
+## Grasshopper prereleases
+
+The add-in packages `RhinoArcGIS.Grasshopper.gha` and the runnable example under
+`Install/Examples/Grasshopper/`. The host loads the library from its own installed directory;
+users should not install a second GHA copy. Yak is optional future distribution work.
+
+`tools/package-release.ps1 -Version 2.0.0-alpha.1 -OutputDirectory <new-directory>` builds
+from a clean commit, verifies the GHA and example in the archive, and copies `MapDesign.ghx`
+and its walkthrough alongside the installer. Upload the example separately and inside the
+release bundle, with checksums and a sanitized validation record. Keep prereleases explicitly
+marked as prereleases and leave stable `site/release.json` certification separate.

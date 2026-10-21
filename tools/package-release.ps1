@@ -4,7 +4,7 @@ param([string]$OutputDirectory, [string]$Version)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 if (Get-Process -Name ArcGISPro -ErrorAction SilentlyContinue) {
-    throw 'Close ArcGIS Pro before packaging; the Esri build registers the add-in locally. Use -p:SkipAddinPackaging=true for compile-only validation instead.'
+    throw 'Close ArcGIS Pro before packaging a release. No processes were closed.'
 }
 # SDK compile globs can pick up ignored local integration code even when Git is clean.
 $trackedSource = @(& git -C $repo -c core.quotepath=false ls-files src)
@@ -21,7 +21,7 @@ if (& git -C $repo status --porcelain) { throw 'Commit the release source before
 $release = Get-Content (Join-Path $repo 'site/release.json') -Raw | ConvertFrom-Json
 if (-not $Version) {
     [xml]$project = Get-Content (Join-Path $repo 'src/RhinoInside.ArcGISPro/RhinoInside.ArcGISPro.csproj')
-    $Version = [string]$project.Project.PropertyGroup.Version | Select-Object -First 1
+    $Version = [string](@($project.Project.PropertyGroup | Where-Object Version)[0].Version)
 }
 $version = $Version
 if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$') { throw 'Invalid release version.' }
